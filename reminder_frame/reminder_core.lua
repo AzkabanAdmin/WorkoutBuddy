@@ -44,11 +44,13 @@ function ReminderCore:CreateOrUpdateFrame()
     if WorkoutBuddy.ReminderFrame then return end -- Already created
     WorkoutBuddy:DbgPrint("ReminderCore: Creating Frame")
 
-    local opts = ReminderState.getProfileOpts()  -- FIX: define opts
+    local opts = ReminderState.getProfileOpts()
 
     WorkoutBuddy.ReminderFrame = CreateFrame("Frame", "WorkoutBuddy_ReminderFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     WorkoutBuddy.ReminderFrame:SetSize(320, 140)
-    WorkoutBuddy.ReminderFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    local x = opts.x or ReminderState.DEFAULTS.x
+    local y = opts.y or ReminderState.DEFAULTS.y
+    WorkoutBuddy.ReminderFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
     WorkoutBuddy.ReminderFrame:SetScale(opts.scale or 1.1)
     WorkoutBuddy.ReminderFrame:SetAlpha(opts.alpha or 0.85)
     WorkoutBuddy.ReminderFrame:SetMovable(true)
