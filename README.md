@@ -1,79 +1,110 @@
-Overview
+# Workout Buddy
 
-This repository contains a World of Warcraft addon called Workout Buddy. The addon reminds players to perform short exercises during gameplay. It uses the Ace3 framework for addon structure, configuration UI, and event handling.
+*Workout Buddy* is a World of Warcraft addon that reminds players to perform short exercises during gameplay. It uses the Ace3 framework for addon structure, configuration UI, and event handling.
 
-Main Components
+---
 
-WorkoutBuddy.lua
+## Overview
 
-The main addon file registers the addon using AceAddon, sets up a debug printing function, initializes the saved database (WorkoutBuddyDB), and registers slash commands. Default workouts are created on first launch. It also initializes the minimap button, configuration UI, and the reminder system.
+Workout Buddy helps players stay active by suggesting quick exercises at intervals triggered by in-game events. The codebase is modular, making it easy to extend and maintain.
 
-events.lua
+---
 
-Handles core WoW events such as leveling up or changing zones. Each event checks the player’s settings and may trigger a workout suggestion via WorkoutBuddy:SuggestWorkout. It also tracks XP bubbles to trigger reminders.
+## Main Components
 
-reminder_frame/
+### `WorkoutBuddy.lua`
+- Registers the addon with AceAddon.
+- Initializes the saved database (`WorkoutBuddyDB`) and debug printing.
+- Registers slash commands.
+- Sets up default workouts on first launch.
+- Initializes the minimap button, configuration UI, and the reminder system.
 
+### `events.lua`
+- Handles core WoW events such as leveling up or changing zones.
+- Triggers workout suggestions via `WorkoutBuddy:SuggestWorkout` based on player settings.
+- Tracks XP bubbles to trigger reminders.
+
+### `reminder_frame/`
 Contains several modules:
+- *reminder_core.lua*: Creates/updates the reminder frame, manages the exercise queue, and handles user interactions (complete, dismiss, partial).
+- *reminder_queue.lua*: Manages the list of pending workouts (add, subtract, remove).
+- *reminder_state.lua*: Stores frame settings and the queue in saved variables.
+- *reminder_events.lua*: Decides when to show the reminder frame based on various gameplay events (e.g., taxi rides, quests).
 
-reminder_core.lua – creates and updates the reminder frame, manages the queue of exercises, and provides user interactions (complete/dismiss/partial).
+---
 
-reminder_queue.lua – manages the list of pending workouts (add, subtract, remove).
+## Configuration System
 
-reminder_state.lua – stores frame settings and the queue in the saved variables.
+- *config.lua*: Builds the AceConfig options tree and registers it with WoW’s interface options.
+- *Tab modules in `config/`:*
+    - *general.lua*: Toggle which events trigger workouts.
+    - *workouts.lua*: View, add, or remove workouts; quick-add from a predefined library.
+    - *importexport.lua*: Export or import your workout list with serialized strings. Includes `SerializeWorkouts` and `DeserializeWorkouts` helpers.
 
-reminder_events.lua – decides when to show the reminder frame based on various gameplay events (e.g., taxi rides or quests).
+---
 
-Config System
+## Minimap Button
 
-config.lua builds the AceConfig options tree and registers it with the game’s interface options. It links to tab modules under config/ such as:
+- *minimap_button.lua*: Implements a LibDataBroker launcher that toggles the reminder frame or opens settings from the minimap.
+- Pulses to indicate pending workouts.
 
-general.lua – toggles to choose which events trigger workouts.
+---
 
-workouts.lua – interface for viewing, adding, or removing workouts and quick-adding from a predefined library.
+## Workout Library
 
-importexport.lua – lets users export or import their workout list using serialized strings. It provides helper functions SerializeWorkouts and DeserializeWorkouts.
+- *config/workout_library.lua*: Curated list of example exercises, categorized by type. Used for quick-add functionality.
 
-Minimap Button
+---
 
-minimap_button.lua creates a LibDataBroker launcher that toggles the reminder frame or opens the settings from the minimap. It also pulses to indicate pending workouts.
+## Addon Manifest
 
-Workout Library
+- *WorkoutBuddy.toc*: Lists files in load order and declares the saved variable `WorkoutBuddyDB`.
 
-config/workout_library.lua defines a curated list of example exercises categorized by type. This library is used for quick-add functionality.
+---
 
-Addon Manifest
+## Important Concepts
 
-WorkoutBuddy.toc lists files in the order the game loads them and declares the saved variable WorkoutBuddyDB.
+- **Global Table:** Exposes the `WorkoutBuddy` table globally for submodules to attach functionality.
+- **Saved Variables:** User preferences and workout lists are stored in `WorkoutBuddyDB` (via AceDB), with profile support.
+- **Reminder Queue:** Workouts accumulate in a queue. The reminder frame shows the queue and allows marking workouts as complete, partially complete, or dismissed.
+- **Event-Driven:** Game events (e.g., `PLAYER_LEVEL_UP`, zone changes) and custom events in `reminder_events.lua` trigger suggestions and reminder displays.
 
-Important Concepts
+---
 
-Global Table: The addon exposes WorkoutBuddy globally so submodules can attach functionality.
+## Learning More
 
-Saved Variables: User preferences and workout lists are stored in WorkoutBuddyDB using AceDB. Profiles support is handled automatically.
+- **Ace3 Framework:**  
+  See the [Ace3 documentation](https://www.wowace.com/projects/ace3), especially AceAddon, AceDB, and AceConfig.
 
-Reminder Queue: Workouts accumulate in a queue. The reminder frame shows the queue with options to mark workouts complete, partially complete, or dismiss.
+- **WoW Widget API:**  
+  Check out [WoW Widget API](https://wowpedia.fandom.com/wiki/Widget_API) for frame creation and UI scripting, as used in `reminder_core.lua`.
 
-Event-driven: Both game events (PLAYER_LEVEL_UP, zone changes, etc.) and custom events in reminder_events.lua trigger the suggestion system and the reminder display.
+- **SavedVariables & Profiles:**  
+  Study how `LibStub("AceDB-3.0")` manages persistent data. The defaults table in `WorkoutBuddy.lua` shows the initial setup.
 
-Pointers for Learning More
+- **Addon Packaging:**  
+  Review `WorkoutBuddy.toc` for load order and library embedding. For development, copy the addon directory to your `World of Warcraft/Interface/AddOns/` folder.
 
-Ace3 Framework
-Explore the Ace3 documentation, especially AceAddon, AceDB, and AceConfig, since much of the addon relies on these libraries.
+---
 
-WoW Widget API
-Review Blizzard’s frame widget APIs to understand frame creation and user interactions found in reminder_core.lua.
+## Adding Events or Workouts
 
-SavedVariables & Profiles
-Look into how LibStub("AceDB-3.0") manages persistent data. The defaults table in WorkoutBuddy.lua shows the initial profile setup.
+- **To add new triggers:**  
+  Modify `events.lua` or `reminder_events.lua`.
 
-Addon Packaging
-Study WorkoutBuddy.toc to see how files are loaded and how libraries are embedded. For development, the addon directory must be copied to World of Warcraft’s Interface/AddOns folder.
+- **To extend the default workout library:**  
+  Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.
 
-Adding Events or Workouts
+---
 
-To add new triggers, modify events.lua or reminder_events.lua.
+## Contribution Guide
 
-To extend the default workout library, edit config/workout_library.lua and ensure the configuration UI can reference new categories.
+The codebase maintains a clear separation between gameplay event handling, configuration, and the reminder display.
 
-This structure provides a clean separation between gameplay event handling, user interface configuration, and the reminder display system. New contributors should start by reading WorkoutBuddy.lua and follow how it initializes these modules, then explore individual files as needed.
+**New contributors:**  
+- Start with `WorkoutBuddy.lua` to see module initialization.
+- Explore related files as needed for deeper understanding.
+
+---
+
+*Happy adventuring—and don’t forget to stretch!*
