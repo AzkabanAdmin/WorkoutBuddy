@@ -380,6 +380,27 @@ function ReminderCore:DebugAddTest()
     ReminderCore:UpdateDisplay()
 end
 
+-- Apply current profile options to an existing frame
+function ReminderCore:ApplyOptions()
+    if not WorkoutBuddy.ReminderFrame then return end
+    local opts = ReminderState.getProfileOpts()
+    local x = opts.x or ReminderState.DEFAULTS.x
+    local y = opts.y or ReminderState.DEFAULTS.y
+    WorkoutBuddy.ReminderFrame:ClearAllPoints()
+    WorkoutBuddy.ReminderFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+    WorkoutBuddy.ReminderFrame:SetScale(opts.scale or ReminderState.DEFAULTS.scale)
+    WorkoutBuddy.ReminderFrame:SetAlpha(opts.alpha or ReminderState.DEFAULTS.alpha)
+end
+
+-- Called when AceDB profile changes or reloads
+function ReminderCore:OnProfileChanged()
+    if not WorkoutBuddy.ReminderFrame then
+        self:CreateOrUpdateFrame()
+    end
+    self:ApplyOptions()
+    self:UpdateDisplay()
+end
+
 --------------------------------------------------------
 -- Initialization
 --------------------------------------------------------

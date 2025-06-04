@@ -46,6 +46,18 @@ local defaults = {
             next_time = 0,
             last_time = 0,
         },
+        -- Reminder frame settings (position, scaling, etc.)
+        reminder_frame = {
+            x = 400,
+            y = -200,
+            scale = 1.1,
+            alpha = 0.85,
+            show_when = "rested",
+            sound = 567463,
+            autocenter = true,
+        },
+        -- Stored queue of pending workouts
+        reminder_queue = {},
     }
 }
 
@@ -110,7 +122,10 @@ function WorkoutBuddy:OnProfileChanged()
         WorkoutBuddy.ReminderCore:OnProfileChanged()
     end
 
-    if WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
+    if WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.OnProfileChanged then
+        WorkoutBuddy.Hydration:OnProfileChanged()
+    elseif WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
+        -- Fallback for older versions
         WorkoutBuddy.Hydration:Resume()
     end
 end
