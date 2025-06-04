@@ -10,6 +10,7 @@ function WorkoutBuddy:InitConfig()
         args = {
             general      = WorkoutBuddy_GeneralTab(),
             workouts     = WorkoutBuddy_WorkoutsTab(),
+            stats        = WorkoutBuddy_StatsTab(),
             importexport = WorkoutBuddy_ImportExportTab(),
             profile      = WorkoutBuddy_ProfileTab and WorkoutBuddy_ProfileTab() or AceDBOptions:GetOptionsTable(WorkoutBuddy.db),
         },
