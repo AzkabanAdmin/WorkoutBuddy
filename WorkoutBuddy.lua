@@ -55,6 +55,7 @@ local defaults = {
             show_when = "rested",
             sound = 567463,
             autocenter = true,
+            initialized = false,
         },
         -- Stored queue of pending workouts
         reminder_queue = {},

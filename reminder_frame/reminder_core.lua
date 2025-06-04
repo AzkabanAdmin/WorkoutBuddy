@@ -75,9 +75,15 @@ function ReminderCore:CreateOrUpdateFrame()
 
     WorkoutBuddy.ReminderFrame = CreateFrame("Frame", "WorkoutBuddy_ReminderFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     WorkoutBuddy.ReminderFrame:SetSize(320, 140)
-    local x = opts.x or ReminderState.DEFAULTS.x
-    local y = opts.y or ReminderState.DEFAULTS.y
-    WorkoutBuddy.ReminderFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+    if not opts.initialized then
+        -- First time creating frame for this profile: center it
+        self:CenterFrame(true)
+        opts.initialized = true
+    else
+        local x = opts.x or ReminderState.DEFAULTS.x
+        local y = opts.y or ReminderState.DEFAULTS.y
+        WorkoutBuddy.ReminderFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+    end
     WorkoutBuddy.ReminderFrame:SetScale(opts.scale or 1.1)
     WorkoutBuddy.ReminderFrame:SetAlpha(opts.alpha or 0.85)
     WorkoutBuddy.ReminderFrame:SetMovable(true)
@@ -384,10 +390,15 @@ end
 function ReminderCore:ApplyOptions()
     if not WorkoutBuddy.ReminderFrame then return end
     local opts = ReminderState.getProfileOpts()
-    local x = opts.x or ReminderState.DEFAULTS.x
-    local y = opts.y or ReminderState.DEFAULTS.y
-    WorkoutBuddy.ReminderFrame:ClearAllPoints()
-    WorkoutBuddy.ReminderFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+    if not opts.initialized then
+        self:CenterFrame(true)
+        opts.initialized = true
+    else
+        local x = opts.x or ReminderState.DEFAULTS.x
+        local y = opts.y or ReminderState.DEFAULTS.y
+        WorkoutBuddy.ReminderFrame:ClearAllPoints()
+        WorkoutBuddy.ReminderFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+    end
     WorkoutBuddy.ReminderFrame:SetScale(opts.scale or ReminderState.DEFAULTS.scale)
     WorkoutBuddy.ReminderFrame:SetAlpha(opts.alpha or ReminderState.DEFAULTS.alpha)
 end
