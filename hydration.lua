@@ -20,6 +20,7 @@ Hydration.DEFAULTS = {
     alpha = 0.9,
     x = 0,
     y = 0,
+    initialized = false,
     next_time = 0,
     last_time = 0,
 }
@@ -44,8 +45,15 @@ end
 function Hydration:ApplyOptions()
     if not self.frame then return end
     local o = opts()
-    self.frame:ClearAllPoints()
-    self.frame:SetPoint("CENTER", UIParent, "CENTER", o.x or 0, o.y or 0)
+    if not o.initialized then
+        self.frame:SetPoint("CENTER", UIParent, "CENTER")
+        local left, top = self.frame:GetLeft(), self.frame:GetTop()
+        o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
+        o.initialized = true
+    else
+        self.frame:ClearAllPoints()
+        self.frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", o.x or 0, o.y or 0)
+    end
     self.frame:SetScale(o.scale or 1)
     self.frame:SetAlpha(o.alpha or 0.9)
 end
@@ -54,8 +62,17 @@ function Hydration:CreateFrame()
     if self.frame then return end
     self.frame = CreateFrame("Frame", "WorkoutBuddy_HydrationFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     self.frame:SetSize(220, 80)
-    self:ApplyOptions()
     self.frame:SetClampedToScreen(true)
+    local o = opts()
+    if not o.initialized then
+        -- First time showing the frame: center it and save coordinates
+        self.frame:SetPoint("CENTER", UIParent, "CENTER")
+        local left, top = self.frame:GetLeft(), self.frame:GetTop()
+        o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
+        o.initialized = true
+    else
+        self:ApplyOptions()
+    end
     self.frame:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -70,10 +87,8 @@ function Hydration:CreateFrame()
     self.frame:SetScript("OnDragStop", function(f)
         f:StopMovingOrSizing()
         local opt = opts()
-        local cX, cY = f:GetCenter()
-        local pX, pY = UIParent:GetCenter()
-        opt.x = math.floor(cX - pX + 0.5)
-        opt.y = math.floor(cY - pY + 0.5)
+        opt.x = math.floor(f:GetLeft() + 0.5)
+        opt.y = math.floor(f:GetTop() + 0.5)
         Hydration:ApplyOptions()
     end)
 
@@ -92,10 +107,9 @@ function Hydration:CenterFrame(save)
     self.frame:ClearAllPoints()
     self.frame:SetPoint("CENTER", UIParent, "CENTER")
     if save then
-        local cX, cY = self.frame:GetCenter()
-        local pX, pY = UIParent:GetCenter()
-        o.x = math.floor(cX - pX + 0.5)
-        o.y = math.floor(cY - pY + 0.5)
+        local left, top = self.frame:GetLeft(), self.frame:GetTop()
+        o.x = math.floor(left + 0.5)
+        o.y = math.floor(top + 0.5)
     end
 end
 
