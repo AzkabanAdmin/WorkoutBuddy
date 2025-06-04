@@ -13,8 +13,10 @@ function WorkoutBuddy_StatsTab()
                 order = 1,
                 values = {
                     lifetime = "Lifetime",
+                    day = "Today",
                     week = "This Week",
                     month = "This Month",
+                    custom = "Custom",
                 },
                 get = function()
                     return WorkoutBuddy._statsTimeframe or "lifetime"
@@ -24,16 +26,35 @@ function WorkoutBuddy_StatsTab()
                     LibStub("AceConfigRegistry-3.0"):NotifyChange("WorkoutBuddy")
                 end,
             },
+            customInput = {
+                type = "input",
+                name = "Custom Range",
+                desc = "Use '5d' for 5 days or '2w' for 2 weeks",
+                order = 2,
+                hidden = function()
+                    return (WorkoutBuddy._statsTimeframe or "lifetime") ~= "custom"
+                end,
+                get = function()
+                    return WorkoutBuddy._statsCustomInput or ""
+                end,
+                set = function(info, val)
+                    WorkoutBuddy._statsCustomInput = val
+                    LibStub("AceConfigRegistry-3.0"):NotifyChange("WorkoutBuddy")
+                end,
+            },
             summary = {
                 type = "description",
                 name = function()
                     local tf = WorkoutBuddy._statsTimeframe or "lifetime"
+                    if tf == "custom" then
+                        tf = WorkoutBuddy._statsCustomInput or "lifetime"
+                    end
                     if WorkoutBuddy.Stats and WorkoutBuddy.Stats.GetSummary then
                         return WorkoutBuddy.Stats:GetSummary(tf)
                     end
                     return "No data"
                 end,
-                order = 2,
+                order = 3,
             },
         },
     }
