@@ -1,4 +1,9 @@
-WorkoutBuddy:DbgPrint("Loaded: hydration.lua")
+
+local _, WorkoutBuddy = ...
+WorkoutBuddy = WorkoutBuddy or _G.WorkoutBuddy
+if WorkoutBuddy and WorkoutBuddy.DbgPrint then
+    WorkoutBuddy:DbgPrint("Loaded: hydration.lua")
+end
 
 local Hydration = {}
 
@@ -9,27 +14,14 @@ Hydration.DEFAULTS = {
     timeframe = 120,  -- minutes
     per = 8,          -- ounces per reminder
     interval = 60,    -- minutes for simple interval mode
-    sound = "alarm",
+
+    sound = "Alarm Clock",
     scale = 1.2,
     alpha = 0.9,
     x = 0,
     y = 0,
     next_time = 0,
     last_time = 0,
-}
-
-Hydration.soundNames = {
-    none = "None",
-    alarm = "Alarm Clock",
-    raid = "Raid Warning",
-    whisper = "Whisper",
-}
-
-Hydration.soundMap = {
-    none = nil,
-    alarm = SOUNDKIT and SOUNDKIT.ALARM_CLOCK_WARNING_3 or 12889,
-    raid = SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959,
-    whisper = SOUNDKIT and SOUNDKIT.TELL_MESSAGE or 3081,
 }
 
 local function opts()
@@ -107,16 +99,15 @@ function Hydration:ShowPopup(test)
     end
     self.frame.text:SetText(msg)
     self.frame:Show()
-    if not test and o.sound and self.soundMap[o.sound] then
-        PlaySound(self.soundMap[o.sound], "Master")
+
+    if not test and o.sound then
+        WorkoutBuddy.Sounds:Play(o.sound)
     end
 end
 
 function Hydration:PlaySelectedSound()
     local o = opts()
-    if o.sound and self.soundMap[o.sound] then
-        PlaySound(self.soundMap[o.sound], "Master")
-    end
+    WorkoutBuddy.Sounds:Play(o.sound)
 end
 
 function Hydration:OnTimer()
@@ -156,6 +147,10 @@ function Hydration:Resume()
     self.timer = C_Timer.NewTimer(delay, function() Hydration:OnTimer() end)
 end
 
-WorkoutBuddy.Hydration = Hydration
+if WorkoutBuddy then
+    WorkoutBuddy.Hydration = Hydration
+else
+    _G.WorkoutBuddy_Hydration = Hydration
+end
 return Hydration
 

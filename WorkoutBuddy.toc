@@ -14,6 +14,7 @@ Libs\Ace3\AceDB-3.0\AceDB-3.0.xml
 Libs\Ace3\AceGUI-3.0\AceGUI-3.0.xml
 Libs\Ace3\AceConfig-3.0\AceConfig-3.0.xml
 Libs\Ace3\AceDBOptions-3.0\AceDBOptions-3.0.xml
+Libs\LibSharedMedia-3.0\lib.xml
 
 Libs\LibDBIcon-1.0\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\LibDBIcon-1.0\LibDataBroker-1.1\LibDataBroker-1.1.lua
@@ -22,6 +23,7 @@ Libs\LibDBIcon-1.0\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Libs\LibDBIcon-1.0\embeds.xml
 
 WorkoutBuddy.lua
+Sounds.lua
 events.lua
 stats.lua
 hydration.lua

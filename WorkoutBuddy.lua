@@ -1,6 +1,15 @@
+local addonName, WorkoutBuddy = ...
 local AceDBOptions = LibStub("AceDBOptions-3.0")
-local WorkoutBuddy = LibStub("AceAddon-3.0"):NewAddon("WorkoutBuddy", "AceConsole-3.0", "AceEvent-3.0")
-_G.WorkoutBuddy = WorkoutBuddy  -- Make it accessible in other files
+WorkoutBuddy = LibStub("AceAddon-3.0"):NewAddon(WorkoutBuddy or {}, "WorkoutBuddy", "AceConsole-3.0", "AceEvent-3.0")
+_G.WorkoutBuddy = WorkoutBuddy -- Make it accessible in other files
+if _G.WorkoutBuddy_Sounds then
+    WorkoutBuddy.Sounds = _G.WorkoutBuddy_Sounds
+    _G.WorkoutBuddy_Sounds = nil
+end
+if _G.WorkoutBuddy_Hydration then
+    WorkoutBuddy.Hydration = _G.WorkoutBuddy_Hydration
+    _G.WorkoutBuddy_Hydration = nil
+end
 WorkoutBuddy.DEBUG = false
 
 function WorkoutBuddy:DbgPrint(...)
@@ -28,7 +37,8 @@ local defaults = {
             timeframe = 120,
             per = 8,
             interval = 60,
-            sound = "alarm",
+
+            sound = "Alarm Clock",
             scale = 1.2,
             alpha = 0.9,
             x = 0,
@@ -47,6 +57,9 @@ end
 
 function WorkoutBuddy:OnInitialize()
     self:InitDB()
+    if WorkoutBuddy.Sounds and WorkoutBuddy.Sounds.Init then
+        WorkoutBuddy.Sounds:Init()
+    end
     if self.InitMinimapButton then
         self:InitMinimapButton()
     end

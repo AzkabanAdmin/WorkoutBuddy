@@ -1,3 +1,4 @@
+local _, WorkoutBuddy = ...
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
 local function restartTimer()
@@ -104,14 +105,9 @@ function WorkoutBuddy_HydrationTab()
                 name = "Sound",
                 order = 4,
                 values = function()
-                    return {
-                        none = WorkoutBuddy.Hydration.soundNames.none,
-                        alarm = WorkoutBuddy.Hydration.soundNames.alarm,
-                        raid = WorkoutBuddy.Hydration.soundNames.raid,
-                        whisper = WorkoutBuddy.Hydration.soundNames.whisper,
-                    }
+                    return WorkoutBuddy.Sounds:GetList()
                 end,
-                get = function() return WorkoutBuddy.db.profile.hydration.sound or "alarm" end,
+                get = function() return WorkoutBuddy.db.profile.hydration.sound or "Alarm Clock" end,
                 set = function(info, val)
                     WorkoutBuddy.db.profile.hydration.sound = val
                     restartTimer()
