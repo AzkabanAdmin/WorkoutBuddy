@@ -27,11 +27,13 @@ end
 
 function Sounds:Play(name)
     if not name or name == "None" then return end
-    if media then
-        local s = media:Fetch("sound", name, true)
-        if s and s ~= "" then
-            PlaySound(s, "Master")
-        end
+    if not media then return end
+    local s = media:Fetch("sound", name, true)
+    if not s or s == "" then return end
+    if type(s) == "number" then
+        PlaySound(s, "Master")
+    else
+        PlaySoundFile(s, "Master")
     end
 end
 
