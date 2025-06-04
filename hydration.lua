@@ -20,6 +20,7 @@ Hydration.DEFAULTS = {
     alpha = 0.9,
     x = 0,
     y = 0,
+    initialized = false,
     next_time = 0,
     last_time = 0,
 }
@@ -44,8 +45,15 @@ end
 function Hydration:ApplyOptions()
     if not self.frame then return end
     local o = opts()
-    self.frame:ClearAllPoints()
-    self.frame:SetPoint("CENTER", UIParent, "CENTER", o.x or 0, o.y or 0)
+    if not o.initialized then
+        self.frame:SetPoint("CENTER", UIParent, "CENTER")
+        local left, top = self.frame:GetLeft(), self.frame:GetTop()
+        o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
+        o.initialized = true
+    else
+        self.frame:ClearAllPoints()
+        self.frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", o.x or 0, o.y or 0)
+    end
     self.frame:SetScale(o.scale or 1)
     self.frame:SetAlpha(o.alpha or 0.9)
 end
@@ -54,7 +62,17 @@ function Hydration:CreateFrame()
     if self.frame then return end
     self.frame = CreateFrame("Frame", "WorkoutBuddy_HydrationFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     self.frame:SetSize(220, 80)
-    self:ApplyOptions()
+    self.frame:SetClampedToScreen(true)
+    local o = opts()
+    if not o.initialized then
+        -- First time showing the frame: center it and save coordinates
+        self.frame:SetPoint("CENTER", UIParent, "CENTER")
+        local left, top = self.frame:GetLeft(), self.frame:GetTop()
+        o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
+        o.initialized = true
+    else
+        self:ApplyOptions()
+    end
     self.frame:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -68,9 +86,10 @@ function Hydration:CreateFrame()
     self.frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
     self.frame:SetScript("OnDragStop", function(f)
         f:StopMovingOrSizing()
-        local _, _, _, xOfs, yOfs = f:GetPoint()
         local opt = opts()
-        opt.x, opt.y = math.floor(xOfs + 0.5), math.floor(yOfs + 0.5)
+        opt.x = math.floor(f:GetLeft() + 0.5)
+        opt.y = math.floor(f:GetTop() + 0.5)
+        Hydration:ApplyOptions()
     end)
 
     self.frame.text = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -88,8 +107,9 @@ function Hydration:CenterFrame(save)
     self.frame:ClearAllPoints()
     self.frame:SetPoint("CENTER", UIParent, "CENTER")
     if save then
-        local _, _, _, xOfs, yOfs = self.frame:GetPoint()
-        o.x, o.y = math.floor(xOfs + 0.5), math.floor(yOfs + 0.5)
+        local left, top = self.frame:GetLeft(), self.frame:GetTop()
+        o.x = math.floor(left + 0.5)
+        o.y = math.floor(top + 0.5)
     end
 end
 
@@ -156,8 +176,12 @@ end
 -- Reapply profile settings when the active profile changes
 function Hydration:OnProfileChanged()
     local o = opts()
+    local firstRun = not o.initialized
     self:CreateFrame()
     self:ApplyOptions()
+    if firstRun then
+        self:ShowPopup(true)
+    end
     if o.enabled then
         self:Resume()
     else

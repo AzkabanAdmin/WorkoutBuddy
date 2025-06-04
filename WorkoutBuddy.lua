@@ -55,6 +55,7 @@ local defaults = {
             show_when = "rested",
             sound = 567463,
             autocenter = true,
+            initialized = false,
         },
         -- Stored queue of pending workouts
         reminder_queue = {},
@@ -103,9 +104,31 @@ function WorkoutBuddy:OnInitialize()
         WorkoutBuddy.Hydration:Resume()
     end
 
+    -- Show movable frames the first time a profile is used
+    local rfOpts = WorkoutBuddy.ReminderState.getProfileOpts()
+    if not rfOpts.initialized and WorkoutBuddy.ReminderFrame then
+        WorkoutBuddy.ReminderFrame:Show()
+    end
+    local hydOpts = self.db.profile.hydration
+    if not hydOpts then
+        hydOpts = CopyTable(WorkoutBuddy.Hydration.DEFAULTS)
+        self.db.profile.hydration = hydOpts
+    end
+    if not hydOpts.initialized and WorkoutBuddy.Hydration then
+        WorkoutBuddy.Hydration:ShowPopup(true)
+    end
+
 end
 
 function WorkoutBuddy:OnProfileChanged()
+    local rfOpts = WorkoutBuddy.ReminderState.getProfileOpts()
+    local rfFirst = not rfOpts.initialized
+    local hydOpts = self.db.profile.hydration
+    if not hydOpts then
+        hydOpts = CopyTable(WorkoutBuddy.Hydration.DEFAULTS)
+        self.db.profile.hydration = hydOpts
+    end
+    local hydFirst = not hydOpts.initialized
     -- Only set defaults if the list is missing or empty
     if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
         self.db.profile.workouts = {
@@ -127,6 +150,13 @@ function WorkoutBuddy:OnProfileChanged()
     elseif WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
         -- Fallback for older versions
         WorkoutBuddy.Hydration:Resume()
+    end
+
+    if rfFirst and WorkoutBuddy.ReminderFrame then
+        WorkoutBuddy.ReminderFrame:Show()
+    end
+    if hydFirst and WorkoutBuddy.Hydration then
+        WorkoutBuddy.Hydration:ShowPopup(true)
     end
 end
 
