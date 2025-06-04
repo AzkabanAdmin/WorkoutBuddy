@@ -43,14 +43,21 @@ local function filterRecords(records, timeframe)
         d.day, d.hour, d.min, d.sec = 1, 0, 0, 0
         start = time(d)
     else
-        -- Allow custom strings like '5d' or '2w'
-        local num, unit = timeframe:match("^(%d+)%s*([dw])$")
+        -- Allow custom strings like '2days', '3weeks', '4hours', etc.
+        local num, unit = timeframe:match("^(%d+)%s*(%a+)$")
         num = tonumber(num)
+        unit = unit and unit:lower()
         if num and unit then
-            if unit == "d" then
-                start = now - num * 86400
-            elseif unit == "w" then
-                start = now - num * 7 * 86400
+            local secondsPer = {
+                minute = 60, minutes = 60,
+                hour = 3600, hours = 3600,
+                day = 86400, days = 86400,
+                week = 7 * 86400, weeks = 7 * 86400,
+                month = 30 * 86400, months = 30 * 86400,
+            }
+            local sec = secondsPer[unit]
+            if sec then
+                start = now - num * sec
             end
         end
     end

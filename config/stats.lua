@@ -29,7 +29,7 @@ function WorkoutBuddy_StatsTab()
             customInput = {
                 type = "input",
                 name = "Custom Range",
-                desc = "Use '5d' for 5 days or '2w' for 2 weeks",
+                desc = "Enter ranges like '5days', '2weeks', '3hours' or '10minutes'",
                 order = 2,
                 hidden = function()
                     return (WorkoutBuddy._statsTimeframe or "lifetime") ~= "custom"
