@@ -147,6 +147,22 @@ function Hydration:Resume()
     self.timer = C_Timer.NewTimer(delay, function() Hydration:OnTimer() end)
 end
 
+-- Reapply profile settings when the active profile changes
+function Hydration:OnProfileChanged()
+    local o = opts()
+    if self.frame then
+        self.frame:ClearAllPoints()
+        self.frame:SetPoint("CENTER", UIParent, "CENTER", o.x or 0, o.y or 0)
+        self.frame:SetScale(o.scale or 1)
+        self.frame:SetAlpha(o.alpha or 0.9)
+    end
+    if o.enabled then
+        self:Resume()
+    else
+        self:Stop()
+    end
+end
+
 if WorkoutBuddy then
     WorkoutBuddy.Hydration = Hydration
 else
