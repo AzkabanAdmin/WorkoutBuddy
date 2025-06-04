@@ -21,6 +21,19 @@ local defaults = {
             zonechange_indoors = false,
         },
         stats = {},
+        hydration = {
+            enabled = false,
+            total = 32,
+            timeframe = 120,
+            per = 8,
+            sound = "alarm",
+            scale = 1.2,
+            alpha = 0.9,
+            x = 0,
+            y = 0,
+            next_time = 0,
+            last_time = 0,
+        },
     }
 }
 
@@ -38,7 +51,6 @@ function WorkoutBuddy:OnInitialize()
     -- If workouts is nil or empty, set defaults
     if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
         self.db.profile.workouts = {
-            { name = "Drink Water", amount = 8, unit = "oz" },
             { name = "Stretch", amount = 30, unit = "seconds" },
             { name = "Pushups", amount = 10, unit = "reps" },
             { name = "Sit-ups", amount = 15, unit = "reps" },
@@ -60,13 +72,16 @@ function WorkoutBuddy:OnInitialize()
         WorkoutBuddy.ReminderEvents:Register()
     end
 
+    if WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
+        WorkoutBuddy.Hydration:Resume()
+    end
+
 end
 
 function WorkoutBuddy:OnProfileChanged()
     -- Only set defaults if the list is missing or empty
     if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
         self.db.profile.workouts = {
-            { name = "Drink Water", amount = 8, unit = "oz" },
             { name = "Stretch", amount = 30, unit = "seconds" },
             { name = "Pushups", amount = 10, unit = "reps" },
             { name = "Sit-ups", amount = 15, unit = "reps" },
@@ -78,6 +93,10 @@ function WorkoutBuddy:OnProfileChanged()
 
     if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.OnProfileChanged then
         WorkoutBuddy.ReminderCore:OnProfileChanged()
+    end
+
+    if WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
+        WorkoutBuddy.Hydration:Resume()
     end
 end
 

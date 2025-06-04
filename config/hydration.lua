@@ -1,0 +1,112 @@
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+
+function WorkoutBuddy_HydrationTab()
+    return {
+        type = "group",
+        name = "Hydration",
+        order = 5,
+        args = {
+            enable = {
+                type = "toggle",
+                name = "Enable Hydration Reminders",
+                order = 1,
+                get = function() return WorkoutBuddy.db and WorkoutBuddy.db.profile.hydration and WorkoutBuddy.db.profile.hydration.enabled end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.enabled = val
+                    if val then
+                        WorkoutBuddy.Hydration:Start()
+                    else
+                        WorkoutBuddy.Hydration:Stop()
+                    end
+                end,
+            },
+            total = {
+                type = "input",
+                name = "Total Ounces",
+                desc = "Total amount to drink over the timeframe",
+                order = 2,
+                get = function() return tostring((WorkoutBuddy.db.profile.hydration.total or 32)) end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.total = tonumber(val) or WorkoutBuddy.db.profile.hydration.total
+                end,
+            },
+            timeframe = {
+                type = "input",
+                name = "Timeframe (minutes)",
+                order = 3,
+                get = function() return tostring((WorkoutBuddy.db.profile.hydration.timeframe or 120)) end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.timeframe = tonumber(val) or WorkoutBuddy.db.profile.hydration.timeframe
+                end,
+            },
+            per = {
+                type = "input",
+                name = "Ounces per Reminder",
+                order = 4,
+                get = function() return tostring((WorkoutBuddy.db.profile.hydration.per or 8)) end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.per = tonumber(val) or WorkoutBuddy.db.profile.hydration.per
+                end,
+            },
+            sound = {
+                type = "select",
+                name = "Sound",
+                order = 5,
+                values = function()
+                    return {
+                        none = WorkoutBuddy.Hydration.soundNames.none,
+                        alarm = WorkoutBuddy.Hydration.soundNames.alarm,
+                        raid = WorkoutBuddy.Hydration.soundNames.raid,
+                        whisper = WorkoutBuddy.Hydration.soundNames.whisper,
+                    }
+                end,
+                get = function() return WorkoutBuddy.db.profile.hydration.sound or "alarm" end,
+                set = function(info, val) WorkoutBuddy.db.profile.hydration.sound = val end,
+            },
+            test = {
+                type = "execute",
+                name = "Test Popup",
+                order = 6,
+                func = function() WorkoutBuddy.Hydration:ShowPopup(true) end,
+            },
+            frameHeader = {
+                type = "header",
+                name = "Frame Options",
+                order = 7,
+            },
+            scale = {
+                type = "range",
+                name = "Scale",
+                min = 0.5, max = 2, step = 0.05,
+                order = 8,
+                get = function() return WorkoutBuddy.db.profile.hydration.scale or 1 end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.scale = val
+                    if WorkoutBuddy.Hydration.frame then
+                        WorkoutBuddy.Hydration.frame:SetScale(val)
+                    end
+                end,
+            },
+            alpha = {
+                type = "range",
+                name = "Opacity",
+                min = 0.2, max = 1, step = 0.05,
+                order = 9,
+                get = function() return WorkoutBuddy.db.profile.hydration.alpha or 0.9 end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.alpha = val
+                    if WorkoutBuddy.Hydration.frame then
+                        WorkoutBuddy.Hydration.frame:SetAlpha(val)
+                    end
+                end,
+            },
+            center = {
+                type = "execute",
+                name = "Center Frame",
+                order = 10,
+                func = function() WorkoutBuddy.Hydration:CenterFrame(true) end,
+            },
+        },
+    }
+end
+
