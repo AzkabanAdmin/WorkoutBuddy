@@ -20,6 +20,7 @@ local defaults = {
             zonechange_zone = false,
             zonechange_indoors = false,
         },
+        stats = {},
     }
 }
 

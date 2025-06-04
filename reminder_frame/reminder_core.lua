@@ -303,6 +303,10 @@ function ReminderCore:HandleComplete()
     local idx = ReminderCore.currentIndex or 1
     local queue = ReminderState.getQueue()
     if queue[idx] then
+        local workout = queue[idx]
+        if WorkoutBuddy.Stats and WorkoutBuddy.Stats.AddRecord then
+            WorkoutBuddy.Stats:AddRecord(workout.name, workout.amount, workout.unit, false)
+        end
         ReminderQueue:RemoveAt(idx)
         ReminderCore:UpdateDisplay()
     end
@@ -314,6 +318,10 @@ function ReminderCore:HandlePartial()
     if queue[idx] then
         local amt = tonumber(WorkoutBuddy.ReminderFrame.inputPartial:GetText()) or 0
         if amt > 0 then
+            local workout = queue[idx]
+            if WorkoutBuddy.Stats and WorkoutBuddy.Stats.AddRecord then
+                WorkoutBuddy.Stats:AddRecord(workout.name, amt, workout.unit, true)
+            end
             ReminderQueue:SubtractAmount(idx, amt)
             ReminderCore:UpdateDisplay()
         end
