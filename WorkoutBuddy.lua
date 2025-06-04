@@ -49,7 +49,7 @@ local defaults = {
         -- Reminder frame settings (position, scaling, etc.)
         reminder_frame = {
             x = 400,
-            y = -200,
+            y = 500,
             scale = 1.1,
             alpha = 0.85,
             show_when = "rested",

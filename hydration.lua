@@ -41,14 +41,21 @@ function Hydration:GetInterval()
     return ((o.timeframe or 120) * 60) / reminders
 end
 
-function Hydration:CreateFrame()
-    if self.frame then return end
+function Hydration:ApplyOptions()
+    if not self.frame then return end
     local o = opts()
-    self.frame = CreateFrame("Frame", "WorkoutBuddy_HydrationFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    self.frame:SetSize(220, 80)
+    self.frame:ClearAllPoints()
     self.frame:SetPoint("CENTER", UIParent, "CENTER", o.x or 0, o.y or 0)
     self.frame:SetScale(o.scale or 1)
     self.frame:SetAlpha(o.alpha or 0.9)
+end
+
+function Hydration:CreateFrame()
+    if self.frame then return end
+    self.frame = CreateFrame("Frame", "WorkoutBuddy_HydrationFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    self.frame:SetSize(220, 80)
+    self:ApplyOptions()
+    self.frame:SetClampedToScreen(true)
     self.frame:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -62,8 +69,13 @@ function Hydration:CreateFrame()
     self.frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
     self.frame:SetScript("OnDragStop", function(f)
         f:StopMovingOrSizing()
-        local _, _, _, xOfs, yOfs = f:GetPoint()
-        o.x, o.y = math.floor(xOfs + 0.5), math.floor(yOfs + 0.5)
+        local cX, cY = f:GetCenter()
+        local pX, pY = UIParent:GetCenter()
+        local opt = opts()
+        opt.x = math.floor(cX - pX + 0.5)
+        opt.y = math.floor(cY - pY + 0.5)
+        f:ClearAllPoints()
+        f:SetPoint("CENTER", UIParent, "CENTER", opt.x, opt.y)
     end)
 
     self.frame.text = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -81,16 +93,17 @@ function Hydration:CenterFrame(save)
     self.frame:ClearAllPoints()
     self.frame:SetPoint("CENTER", UIParent, "CENTER")
     if save then
-        local _, _, _, xOfs, yOfs = self.frame:GetPoint()
-        o.x, o.y = math.floor(xOfs + 0.5), math.floor(yOfs + 0.5)
+        local cX, cY = self.frame:GetCenter()
+        local pX, pY = UIParent:GetCenter()
+        o.x = math.floor(cX - pX + 0.5)
+        o.y = math.floor(cY - pY + 0.5)
     end
 end
 
 function Hydration:ShowPopup(test)
     self:CreateFrame()
+    self:ApplyOptions()
     local o = opts()
-    self.frame:SetScale(o.scale or 1)
-    self.frame:SetAlpha(o.alpha or 0.9)
     local msg
     if o.mode == "interval" then
         msg = "Time to drink water!"
@@ -150,12 +163,8 @@ end
 -- Reapply profile settings when the active profile changes
 function Hydration:OnProfileChanged()
     local o = opts()
-    if self.frame then
-        self.frame:ClearAllPoints()
-        self.frame:SetPoint("CENTER", UIParent, "CENTER", o.x or 0, o.y or 0)
-        self.frame:SetScale(o.scale or 1)
-        self.frame:SetAlpha(o.alpha or 0.9)
-    end
+    self:CreateFrame()
+    self:ApplyOptions()
     if o.enabled then
         self:Resume()
     else
