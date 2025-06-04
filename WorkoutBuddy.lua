@@ -1,6 +1,15 @@
+local addonName, WorkoutBuddy = ...
 local AceDBOptions = LibStub("AceDBOptions-3.0")
-local WorkoutBuddy = LibStub("AceAddon-3.0"):NewAddon("WorkoutBuddy", "AceConsole-3.0", "AceEvent-3.0")
-_G.WorkoutBuddy = WorkoutBuddy  -- Make it accessible in other files
+WorkoutBuddy = LibStub("AceAddon-3.0"):NewAddon(WorkoutBuddy or {}, "WorkoutBuddy", "AceConsole-3.0", "AceEvent-3.0")
+_G.WorkoutBuddy = WorkoutBuddy -- Make it accessible in other files
+if _G.WorkoutBuddy_Sounds then
+    WorkoutBuddy.Sounds = _G.WorkoutBuddy_Sounds
+    _G.WorkoutBuddy_Sounds = nil
+end
+if _G.WorkoutBuddy_Hydration then
+    WorkoutBuddy.Hydration = _G.WorkoutBuddy_Hydration
+    _G.WorkoutBuddy_Hydration = nil
+end
 WorkoutBuddy.DEBUG = false
 
 function WorkoutBuddy:DbgPrint(...)

@@ -1,4 +1,8 @@
-WorkoutBuddy:DbgPrint("Loaded: Sounds.lua")
+local _, WorkoutBuddy = ...
+WorkoutBuddy = WorkoutBuddy or _G.WorkoutBuddy
+if WorkoutBuddy and WorkoutBuddy.DbgPrint then
+    WorkoutBuddy:DbgPrint("Loaded: Sounds.lua")
+end
 
 local Sounds = {}
 local media = LibStub("LibSharedMedia-3.0")
@@ -31,5 +35,9 @@ function Sounds:Play(name)
     end
 end
 
-WorkoutBuddy.Sounds = Sounds
+if WorkoutBuddy then
+    WorkoutBuddy.Sounds = Sounds
+else
+    _G.WorkoutBuddy_Sounds = Sounds
+end
 return Sounds

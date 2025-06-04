@@ -1,4 +1,8 @@
-WorkoutBuddy:DbgPrint("Loaded: hydration.lua")
+local _, WorkoutBuddy = ...
+WorkoutBuddy = WorkoutBuddy or _G.WorkoutBuddy
+if WorkoutBuddy and WorkoutBuddy.DbgPrint then
+    WorkoutBuddy:DbgPrint("Loaded: hydration.lua")
+end
 
 local Hydration = {}
 
@@ -141,6 +145,10 @@ function Hydration:Resume()
     self.timer = C_Timer.NewTimer(delay, function() Hydration:OnTimer() end)
 end
 
-WorkoutBuddy.Hydration = Hydration
+if WorkoutBuddy then
+    WorkoutBuddy.Hydration = Hydration
+else
+    _G.WorkoutBuddy_Hydration = Hydration
+end
 return Hydration
 

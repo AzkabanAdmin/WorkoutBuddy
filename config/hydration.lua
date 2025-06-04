@@ -1,3 +1,4 @@
+local _, WorkoutBuddy = ...
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
 local function restartTimer()
