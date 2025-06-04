@@ -3,7 +3,7 @@ WorkoutBuddy:DbgPrint("Loaded: reminder_state.lua")
 local PROFILE_KEY = "reminder_frame"
 local QUEUE_KEY = "reminder_queue"
 local DEFAULTS = {
-    x = 400, y = -200, scale = 1.1, alpha = 0.85,
+    x = 400, y = 500, scale = 1.1, alpha = 0.85,
     show_when = "rested", sound = 567463,
     autocenter = true,
 }
