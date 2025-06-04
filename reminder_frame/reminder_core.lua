@@ -201,8 +201,8 @@ function ReminderCore:UpdateDisplay()
         btnComplete:SetPoint("LEFT", label, "RIGHT", 4, 0)
         btnComplete:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Check")
         btnComplete:SetScript("OnClick", function()
-            ReminderQueue:RemoveAt(i)
-            ReminderCore:UpdateDisplay()
+            ReminderCore.currentIndex = i
+            ReminderCore:HandleComplete()
         end)
         SetTooltip(btnComplete, "Mark as complete")
 
@@ -212,6 +212,7 @@ function ReminderCore:UpdateDisplay()
         btnPartial:SetPoint("LEFT", btnComplete, "RIGHT", 2, 0)
         btnPartial:SetNormalTexture("Interface\\Buttons\\UI-RefreshButton")
         btnPartial:SetScript("OnClick", function()
+            ReminderCore.currentIndex = i
             ReminderCore:ShowPartialInput(i, workout)
         end)
         SetTooltip(btnPartial, "Partial complete")
@@ -267,6 +268,9 @@ function ReminderCore:ShowPartialInput(index, workout)
     edit:SetText("")
     edit:SetScript("OnEnterPressed", function()
         local amt = tonumber(edit:GetText()) or 0
+        if amt > 0 and WorkoutBuddy.Stats and WorkoutBuddy.Stats.AddRecord then
+            WorkoutBuddy.Stats:AddRecord(workout.name, amt, workout.unit, true)
+        end
         ReminderQueue:SubtractAmount(index, amt)
         box:Hide()
         ReminderCore:UpdateDisplay()
@@ -278,6 +282,9 @@ function ReminderCore:ShowPartialInput(index, workout)
     ok:SetText("OK")
     ok:SetScript("OnClick", function()
         local amt = tonumber(edit:GetText()) or 0
+        if amt > 0 and WorkoutBuddy.Stats and WorkoutBuddy.Stats.AddRecord then
+            WorkoutBuddy.Stats:AddRecord(workout.name, amt, workout.unit, true)
+        end
         ReminderQueue:SubtractAmount(index, amt)
         box:Hide()
         ReminderCore:UpdateDisplay()
@@ -303,6 +310,10 @@ function ReminderCore:HandleComplete()
     local idx = ReminderCore.currentIndex or 1
     local queue = ReminderState.getQueue()
     if queue[idx] then
+        local workout = queue[idx]
+        if WorkoutBuddy.Stats and WorkoutBuddy.Stats.AddRecord then
+            WorkoutBuddy.Stats:AddRecord(workout.name, workout.amount, workout.unit, false)
+        end
         ReminderQueue:RemoveAt(idx)
         ReminderCore:UpdateDisplay()
     end
@@ -314,6 +325,10 @@ function ReminderCore:HandlePartial()
     if queue[idx] then
         local amt = tonumber(WorkoutBuddy.ReminderFrame.inputPartial:GetText()) or 0
         if amt > 0 then
+            local workout = queue[idx]
+            if WorkoutBuddy.Stats and WorkoutBuddy.Stats.AddRecord then
+                WorkoutBuddy.Stats:AddRecord(workout.name, amt, workout.unit, true)
+            end
             ReminderQueue:SubtractAmount(idx, amt)
             ReminderCore:UpdateDisplay()
         end
