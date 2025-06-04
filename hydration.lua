@@ -1,3 +1,4 @@
+
 local _, WorkoutBuddy = ...
 WorkoutBuddy = WorkoutBuddy or _G.WorkoutBuddy
 if WorkoutBuddy and WorkoutBuddy.DbgPrint then
@@ -13,6 +14,7 @@ Hydration.DEFAULTS = {
     timeframe = 120,  -- minutes
     per = 8,          -- ounces per reminder
     interval = 60,    -- minutes for simple interval mode
+
     sound = "Alarm Clock",
     scale = 1.2,
     alpha = 0.9,
@@ -21,7 +23,6 @@ Hydration.DEFAULTS = {
     next_time = 0,
     last_time = 0,
 }
-
 
 local function opts()
     if not WorkoutBuddy.db or not WorkoutBuddy.db.profile then return Hydration.DEFAULTS end
@@ -98,6 +99,7 @@ function Hydration:ShowPopup(test)
     end
     self.frame.text:SetText(msg)
     self.frame:Show()
+
     if not test and o.sound then
         WorkoutBuddy.Sounds:Play(o.sound)
     end

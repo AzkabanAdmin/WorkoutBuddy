@@ -37,6 +37,7 @@ local defaults = {
             timeframe = 120,
             per = 8,
             interval = 60,
+
             sound = "Alarm Clock",
             scale = 1.2,
             alpha = 0.9,
