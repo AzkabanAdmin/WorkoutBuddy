@@ -22,9 +22,8 @@ Libs\LibDBIcon-1.0\LibDBIcon-1.0\lib.xml
 Libs\LibDBIcon-1.0\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Libs\LibDBIcon-1.0\embeds.xml
 
-Sounds.lua
-
 WorkoutBuddy.lua
+Sounds.lua
 events.lua
 stats.lua
 hydration.lua
