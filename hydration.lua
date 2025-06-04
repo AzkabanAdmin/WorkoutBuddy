@@ -176,8 +176,12 @@ end
 -- Reapply profile settings when the active profile changes
 function Hydration:OnProfileChanged()
     local o = opts()
+    local firstRun = not o.initialized
     self:CreateFrame()
     self:ApplyOptions()
+    if firstRun then
+        self:ShowPopup(true)
+    end
     if o.enabled then
         self:Resume()
     else

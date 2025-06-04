@@ -405,11 +405,16 @@ end
 
 -- Called when AceDB profile changes or reloads
 function ReminderCore:OnProfileChanged()
+    local opts = ReminderState.getProfileOpts()
+    local firstRun = not opts.initialized
     if not WorkoutBuddy.ReminderFrame then
         self:CreateOrUpdateFrame()
     end
     self:ApplyOptions()
     self:UpdateDisplay()
+    if firstRun and WorkoutBuddy.ReminderFrame then
+        WorkoutBuddy.ReminderFrame:Show()
+    end
 end
 
 --------------------------------------------------------
@@ -417,7 +422,12 @@ end
 --------------------------------------------------------
 function ReminderCore:Init()
     WorkoutBuddy:DbgPrint("ReminderCore: Init function called")
+    local opts = ReminderState.getProfileOpts()
+    local firstRun = not opts.initialized
     self:CreateOrUpdateFrame()
+    if firstRun and WorkoutBuddy.ReminderFrame then
+        WorkoutBuddy.ReminderFrame:Show()
+    end
     -- Optionally, show test reminder on load
     -- self:DebugAddTest()
 end
