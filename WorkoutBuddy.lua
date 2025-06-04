@@ -47,8 +47,8 @@ function WorkoutBuddy:OnInitialize()
     end
     self:InitConfig()
     WorkoutBuddy.ReminderCore:Init()
-    self:RegisterChatCommand("workoutbuddy", "OpenConfig")
-    self:RegisterChatCommand("wob", "OpenConfig")
+    self:RegisterChatCommand("workoutbuddy", "HandleSlashCommand")
+    self:RegisterChatCommand("wob", "HandleSlashCommand")
     self:Print("Workout Buddy loaded! Type /workoutbuddy to open settings.")
 
     -- Listen for AceDB profile events
@@ -115,5 +115,17 @@ function WorkoutBuddy:ForceFullConfigRefresh()
         C_Timer.After(0.2, function()
             InterfaceOptionsFrame_OpenToCategory(self.optionsFrame)
         end)
+    end
+end
+
+function WorkoutBuddy:HandleSlashCommand(input)
+    input = strtrim(string.lower(input or ""))
+    if input == "center" then
+        if self.ReminderCore and self.ReminderCore.CenterFrame then
+            self.ReminderCore:CenterFrame(true)
+            self:Print("Reminder frame centered.")
+        end
+    else
+        self:OpenConfig()
     end
 end

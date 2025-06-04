@@ -66,6 +66,42 @@ function WorkoutBuddy_GeneralTab()
                     },
                 },
             },
+            frameHeader = {
+                type = "header",
+                name = "Reminder Frame",
+                order = 4,
+            },
+            frameOptions = {
+                type = "group",
+                name = "Frame Options",
+                inline = true,
+                order = 5,
+                args = {
+                    autocenter = {
+                        type = "toggle",
+                        name = "Auto center when off-screen",
+                        order = 1,
+                        get = function()
+                            local opts = WorkoutBuddy.ReminderState.getProfileOpts()
+                            return opts.autocenter ~= false
+                        end,
+                        set = function(info, val)
+                            local opts = WorkoutBuddy.ReminderState.getProfileOpts()
+                            opts.autocenter = val
+                        end,
+                    },
+                    centerNow = {
+                        type = "execute",
+                        name = "Center Frame Now",
+                        order = 2,
+                        func = function()
+                            if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.CenterFrame then
+                                WorkoutBuddy.ReminderCore:CenterFrame(true)
+                            end
+                        end,
+                    },
+                },
+            },
         },
     }
 end
