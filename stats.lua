@@ -3,6 +3,7 @@ local WorkoutBuddy = WorkoutBuddy
 local Stats = {}
 
 local function timeNow()
+
     -- Use WoW API if available, otherwise fall back to Lua's time()
     return (GetServerTime and GetServerTime()) or time()
 end
@@ -17,6 +18,7 @@ function Stats:AddRecord(name, amount, unit, partial)
         partial = partial,
         timestamp = timeNow(),
     })
+
     local reg = LibStub and LibStub("AceConfigRegistry-3.0", true)
     if reg then reg:NotifyChange("WorkoutBuddy") end
 end
