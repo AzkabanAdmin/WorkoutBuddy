@@ -20,38 +20,74 @@ function WorkoutBuddy_HydrationTab()
                     end
                 end,
             },
-            total = {
-                type = "input",
-                name = "Total Ounces",
-                desc = "Total amount to drink over the timeframe",
+            mode = {
+                type = "select",
+                name = "Reminder Mode",
+                desc = "Choose scheduling method",
                 order = 2,
-                get = function() return tostring((WorkoutBuddy.db.profile.hydration.total or 32)) end,
-                set = function(info, val)
-                    WorkoutBuddy.db.profile.hydration.total = tonumber(val) or WorkoutBuddy.db.profile.hydration.total
-                end,
+                values = { smart = "Goal Based", interval = "Simple Interval" },
+                get = function() return WorkoutBuddy.db.profile.hydration.mode or "smart" end,
+                set = function(info, val) WorkoutBuddy.db.profile.hydration.mode = val end,
             },
-            timeframe = {
-                type = "input",
-                name = "Timeframe (minutes)",
+            smartGroup = {
+                type = "group",
+                name = "Goal Based",
+                inline = true,
                 order = 3,
-                get = function() return tostring((WorkoutBuddy.db.profile.hydration.timeframe or 120)) end,
-                set = function(info, val)
-                    WorkoutBuddy.db.profile.hydration.timeframe = tonumber(val) or WorkoutBuddy.db.profile.hydration.timeframe
-                end,
+                hidden = function() return (WorkoutBuddy.db.profile.hydration.mode or "smart") ~= "smart" end,
+                args = {
+                    total = {
+                        type = "input",
+                        name = "Total Ounces",
+                        desc = "Total amount to drink over the timeframe",
+                        order = 1,
+                        get = function() return tostring((WorkoutBuddy.db.profile.hydration.total or 32)) end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.hydration.total = tonumber(val) or WorkoutBuddy.db.profile.hydration.total
+                        end,
+                    },
+                    timeframe = {
+                        type = "input",
+                        name = "Timeframe (minutes)",
+                        order = 2,
+                        get = function() return tostring((WorkoutBuddy.db.profile.hydration.timeframe or 120)) end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.hydration.timeframe = tonumber(val) or WorkoutBuddy.db.profile.hydration.timeframe
+                        end,
+                    },
+                    per = {
+                        type = "input",
+                        name = "Ounces per Reminder",
+                        order = 3,
+                        get = function() return tostring((WorkoutBuddy.db.profile.hydration.per or 8)) end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.hydration.per = tonumber(val) or WorkoutBuddy.db.profile.hydration.per
+                        end,
+                    },
+                },
             },
-            per = {
-                type = "input",
-                name = "Ounces per Reminder",
-                order = 4,
-                get = function() return tostring((WorkoutBuddy.db.profile.hydration.per or 8)) end,
-                set = function(info, val)
-                    WorkoutBuddy.db.profile.hydration.per = tonumber(val) or WorkoutBuddy.db.profile.hydration.per
-                end,
+            intervalGroup = {
+                type = "group",
+                name = "Simple Interval",
+                inline = true,
+                order = 3,
+                hidden = function() return (WorkoutBuddy.db.profile.hydration.mode or "smart") ~= "interval" end,
+                args = {
+                    interval = {
+                        type = "input",
+                        name = "Reminder Every (minutes)",
+                        order = 1,
+                        get = function() return tostring((WorkoutBuddy.db.profile.hydration.interval or 60)) end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.hydration.interval = tonumber(val) or WorkoutBuddy.db.profile.hydration.interval
+                        end,
+                    },
+                },
             },
             sound = {
                 type = "select",
                 name = "Sound",
-                order = 5,
+                order = 4,
                 values = function()
                     return {
                         none = WorkoutBuddy.Hydration.soundNames.none,
@@ -62,6 +98,12 @@ function WorkoutBuddy_HydrationTab()
                 end,
                 get = function() return WorkoutBuddy.db.profile.hydration.sound or "alarm" end,
                 set = function(info, val) WorkoutBuddy.db.profile.hydration.sound = val end,
+            },
+            testSound = {
+                type = "execute",
+                name = "Test Sound",
+                order = 5,
+                func = function() WorkoutBuddy.Hydration:PlaySelectedSound() end,
             },
             test = {
                 type = "execute",

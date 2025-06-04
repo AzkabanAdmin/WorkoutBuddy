@@ -4,9 +4,11 @@ local Hydration = {}
 
 Hydration.DEFAULTS = {
     enabled = false,
+    mode = "smart", -- "smart" uses goals; "interval" uses minutes
     total = 32,       -- total ounces per cycle
     timeframe = 120,  -- minutes
     per = 8,          -- ounces per reminder
+    interval = 60,    -- minutes for simple interval mode
     sound = "alarm",
     scale = 1.2,
     alpha = 0.9,
@@ -40,6 +42,9 @@ end
 
 function Hydration:GetInterval()
     local o = opts()
+    if o.mode == "interval" then
+        return (o.interval or 60) * 60
+    end
     local reminders = math.max(1, math.ceil((o.total or 32) / (o.per or 8)))
     return ((o.timeframe or 120) * 60) / reminders
 end
@@ -52,6 +57,13 @@ function Hydration:CreateFrame()
     self.frame:SetPoint("CENTER", UIParent, "CENTER", o.x or 0, o.y or 0)
     self.frame:SetScale(o.scale or 1)
     self.frame:SetAlpha(o.alpha or 0.9)
+    self.frame:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 8, edgeSize = 8,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    self.frame:SetBackdropColor(0, 0, 0, 0.85)
     self.frame:SetMovable(true)
     self.frame:EnableMouse(true)
     self.frame:RegisterForDrag("LeftButton")
@@ -87,9 +99,22 @@ function Hydration:ShowPopup(test)
     local o = opts()
     self.frame:SetScale(o.scale or 1)
     self.frame:SetAlpha(o.alpha or 0.9)
-    self.frame.text:SetText(string.format("Drink %d oz of water!", o.per or 8))
+    local msg
+    if o.mode == "interval" then
+        msg = "Time to drink water!"
+    else
+        msg = string.format("Drink %d oz of water!", o.per or 8)
+    end
+    self.frame.text:SetText(msg)
     self.frame:Show()
     if not test and o.sound and self.soundMap[o.sound] then
+        PlaySound(self.soundMap[o.sound], "Master")
+    end
+end
+
+function Hydration:PlaySelectedSound()
+    local o = opts()
+    if o.sound and self.soundMap[o.sound] then
         PlaySound(self.soundMap[o.sound], "Master")
     end
 end
