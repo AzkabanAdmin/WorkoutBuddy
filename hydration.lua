@@ -70,8 +70,8 @@ function Hydration:CreateFrame()
     self.frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
     self.frame:SetScript("OnDragStop", function(f)
         f:StopMovingOrSizing()
-        local x, y = f:GetLeft(), f:GetTop()
-        o.x, o.y = math.floor(x + 0.5), math.floor(y + 0.5)
+        local _, _, _, xOfs, yOfs = f:GetPoint()
+        o.x, o.y = math.floor(xOfs + 0.5), math.floor(yOfs + 0.5)
     end)
 
     self.frame.text = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -89,8 +89,8 @@ function Hydration:CenterFrame(save)
     self.frame:ClearAllPoints()
     self.frame:SetPoint("CENTER", UIParent, "CENTER")
     if save then
-        local x, y = self.frame:GetLeft(), self.frame:GetTop()
-        o.x, o.y = math.floor(x + 0.5), math.floor(y + 0.5)
+        local _, _, _, xOfs, yOfs = self.frame:GetPoint()
+        o.x, o.y = math.floor(xOfs + 0.5), math.floor(yOfs + 0.5)
     end
 end
 

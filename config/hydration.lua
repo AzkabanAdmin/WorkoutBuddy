@@ -1,5 +1,13 @@
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
+local function restartTimer()
+    if WorkoutBuddy.db and WorkoutBuddy.db.profile
+        and WorkoutBuddy.db.profile.hydration
+        and WorkoutBuddy.db.profile.hydration.enabled then
+        WorkoutBuddy.Hydration:Start()
+    end
+end
+
 function WorkoutBuddy_HydrationTab()
     return {
         type = "group",
@@ -27,7 +35,10 @@ function WorkoutBuddy_HydrationTab()
                 order = 2,
                 values = { smart = "Goal Based", interval = "Simple Interval" },
                 get = function() return WorkoutBuddy.db.profile.hydration.mode or "smart" end,
-                set = function(info, val) WorkoutBuddy.db.profile.hydration.mode = val end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.mode = val
+                    restartTimer()
+                end,
             },
             smartGroup = {
                 type = "group",
@@ -44,6 +55,7 @@ function WorkoutBuddy_HydrationTab()
                         get = function() return tostring((WorkoutBuddy.db.profile.hydration.total or 32)) end,
                         set = function(info, val)
                             WorkoutBuddy.db.profile.hydration.total = tonumber(val) or WorkoutBuddy.db.profile.hydration.total
+                            restartTimer()
                         end,
                     },
                     timeframe = {
@@ -53,6 +65,7 @@ function WorkoutBuddy_HydrationTab()
                         get = function() return tostring((WorkoutBuddy.db.profile.hydration.timeframe or 120)) end,
                         set = function(info, val)
                             WorkoutBuddy.db.profile.hydration.timeframe = tonumber(val) or WorkoutBuddy.db.profile.hydration.timeframe
+                            restartTimer()
                         end,
                     },
                     per = {
@@ -62,6 +75,7 @@ function WorkoutBuddy_HydrationTab()
                         get = function() return tostring((WorkoutBuddy.db.profile.hydration.per or 8)) end,
                         set = function(info, val)
                             WorkoutBuddy.db.profile.hydration.per = tonumber(val) or WorkoutBuddy.db.profile.hydration.per
+                            restartTimer()
                         end,
                     },
                 },
@@ -80,6 +94,7 @@ function WorkoutBuddy_HydrationTab()
                         get = function() return tostring((WorkoutBuddy.db.profile.hydration.interval or 60)) end,
                         set = function(info, val)
                             WorkoutBuddy.db.profile.hydration.interval = tonumber(val) or WorkoutBuddy.db.profile.hydration.interval
+                            restartTimer()
                         end,
                     },
                 },
@@ -97,7 +112,10 @@ function WorkoutBuddy_HydrationTab()
                     }
                 end,
                 get = function() return WorkoutBuddy.db.profile.hydration.sound or "alarm" end,
-                set = function(info, val) WorkoutBuddy.db.profile.hydration.sound = val end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.hydration.sound = val
+                    restartTimer()
+                end,
             },
             testSound = {
                 type = "execute",
