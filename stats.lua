@@ -3,7 +3,9 @@ local WorkoutBuddy = WorkoutBuddy
 local Stats = {}
 
 local function timeNow()
-    return (GetServerTime and GetServerTime()) or os.time()
+
+    -- Use WoW API if available, otherwise fall back to Lua's time()
+    return (GetServerTime and GetServerTime()) or time()
 end
 
 function Stats:AddRecord(name, amount, unit, partial)
@@ -16,11 +18,9 @@ function Stats:AddRecord(name, amount, unit, partial)
         partial = partial,
         timestamp = timeNow(),
     })
-    woqtbd-codex/add-stats-area-with-filters-to-settings-tab
+
     local reg = LibStub and LibStub("AceConfigRegistry-3.0", true)
     if reg then reg:NotifyChange("WorkoutBuddy") end
-
-     main
 end
 
 function Stats:GetRecords()
