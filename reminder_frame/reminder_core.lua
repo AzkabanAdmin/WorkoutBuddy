@@ -22,15 +22,42 @@ local function SetTooltip(frame, text)
     frame:SetScript("OnLeave", function(self) GameTooltip:Hide() end)
 end
 
+local function IsFrameOffScreen(frame)
+    if not frame or not frame.GetLeft or not frame:GetLeft() then return false end
+    local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
+    local sw, sh = GetScreenWidth(), GetScreenHeight()
+    return right < 0 or left > sw or top < 0 or bottom > sh
+end
+
+function ReminderCore:CenterFrame(save)
+    if not WorkoutBuddy.ReminderFrame then return end
+    local opts = ReminderState.getProfileOpts()
+    WorkoutBuddy.ReminderFrame:ClearAllPoints()
+    WorkoutBuddy.ReminderFrame:SetPoint("CENTER", UIParent, "CENTER")
+    if save then
+        local x, y = WorkoutBuddy.ReminderFrame:GetLeft(), WorkoutBuddy.ReminderFrame:GetTop()
+        opts.x, opts.y = math.floor(x + 0.5), math.floor(y + 0.5)
+    end
+end
+
+function ReminderCore:EnsureOnScreen()
+    local opts = ReminderState.getProfileOpts()
+    if opts.autocenter and IsFrameOffScreen(WorkoutBuddy.ReminderFrame) then
+        self:CenterFrame(true)
+    end
+end
+
 function ReminderCore:ShowIfAllowed()
     -- Only open if frame exists and not already open
     if WorkoutBuddy.ReminderFrame and not WorkoutBuddy.ReminderFrame:IsShown() then
         self:UpdateDisplay()
+        self:EnsureOnScreen()
         WorkoutBuddy.ReminderFrame:Show()
         WorkoutBuddy:StopMinimapPulse()
     elseif not WorkoutBuddy.ReminderFrame then
         self:CreateOrUpdateFrame()
         self:UpdateDisplay()
+        self:EnsureOnScreen()
         WorkoutBuddy.ReminderFrame:Show()
         WorkoutBuddy:StopMinimapPulse()
     end
@@ -124,6 +151,7 @@ function ReminderCore:CreateOrUpdateFrame()
         if height < minH then self:SetHeight(minH) end
         ReminderCore:UpdateDisplay()
     end)
+    self:EnsureOnScreen()
 
  
 

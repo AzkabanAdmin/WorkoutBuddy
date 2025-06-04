@@ -16,6 +16,7 @@ Workout Buddy helps players stay active by suggesting quick exercises at interva
 - Registers the addon with AceAddon.
 - Initializes the saved database (`WorkoutBuddyDB`) and debug printing.
 - Registers slash commands.
+- `/wob center` can be used to reset the reminder frame to the middle of the screen.
 - Sets up default workouts on first launch.
 - Initializes the minimap button, configuration UI, and the reminder system.
 
