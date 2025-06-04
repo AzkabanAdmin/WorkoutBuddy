@@ -20,7 +20,7 @@ function WorkoutBuddy_GeneralTab()
             },
             eventTriggers = {
                 type = "group",
-                name = "Choose when Workout Buddy reminds you!",
+                name = "Choose when Workout Buddy Triggers An Actviity!",
                 inline = true,
                 order = 3,
                 args = {
