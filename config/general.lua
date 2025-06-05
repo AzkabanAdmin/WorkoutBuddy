@@ -96,13 +96,14 @@ function WorkoutBuddy_GeneralTab()
             },
             frameOptions = {
                 type = "group",
-                name = "Frame Options",
+                name = "Workout Reminder Frame Options",
                 inline = true,
                 order = 5,
                 args = {
                     centerNow = {
                         type = "execute",
                         name = "Center Frame Now",
+                        width = "full",
                         order = 2,
                         func = function()
                             if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.CenterFrame then
