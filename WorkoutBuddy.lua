@@ -57,6 +57,12 @@ local defaults = {
             autocenter = true,
             initialized = false,
         },
+        -- When to automatically open the reminder frame
+        reminder_events = {
+            taxi = true,
+            rested = true,
+            quest = true,
+        },
         -- Stored queue of pending workouts
         reminder_queue = {},
     }
@@ -140,6 +146,10 @@ function WorkoutBuddy:OnProfileChanged()
     end
     self:RebuildWorkoutListOptions()
     self:ForceFullConfigRefresh()
+
+    if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
+        WorkoutBuddy.ReminderEvents:Register()
+    end
 
     if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.OnProfileChanged then
         WorkoutBuddy.ReminderCore:OnProfileChanged()
