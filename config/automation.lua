@@ -35,7 +35,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         frame.content:ClearAllPoints()
         -- leave room for the status bar at the bottom
         frame.content:SetPoint("TOPLEFT", 17, -27)
-        frame.content:SetPoint("BOTTOMRIGHT", -17, 55)
+        frame.content:SetPoint("BOTTOMRIGHT", -17, 45)
     end
 
     local nameBox = AceGUI:Create("EditBox")
@@ -70,15 +70,10 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     save:SetText("Save")
     save:SetWidth(100)
 
-    local closeBtn = AceGUI:Create("Button")
-    closeBtn:SetText("Close")
-    closeBtn:SetWidth(100)
-
     local btnGroup = AceGUI:Create("SimpleGroup")
     btnGroup:SetFullWidth(true)
     btnGroup:SetLayout("Flow")
     btnGroup:AddChild(save)
-    btnGroup:AddChild(closeBtn)
     frame:AddChild(btnGroup)
 
     -- Internal helpers
@@ -121,9 +116,5 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         self:ForceFullConfigRefresh()
         frame:Hide()
     end)
-    closeBtn:SetCallback("OnClick", function()
-        frame:Hide()
-    end)
-
     -- Buttons sit above the frame's status bar
 end

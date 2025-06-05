@@ -51,6 +51,15 @@ TriggerManager.EventList = {
     UNIT_AURA = "UNIT_AURA",
     UNIT_SPELLCAST_SUCCEEDED = "UNIT_SPELLCAST_SUCCEEDED",
     COMBAT_LOG_EVENT_UNFILTERED = "COMBAT_LOG_EVENT_UNFILTERED",
+    CHAT_MSG_SAY = "CHAT_MSG_SAY",
+    CHAT_MSG_YELL = "CHAT_MSG_YELL",
+    CHAT_MSG_GUILD = "CHAT_MSG_GUILD",
+    CHAT_MSG_PARTY = "CHAT_MSG_PARTY",
+    PLAYER_STARTED_MOVING = "PLAYER_STARTED_MOVING",
+    PLAYER_STOPPED_MOVING = "PLAYER_STOPPED_MOVING",
+    INSTANCE_ENCOUNTER_ENGAGE_UNIT = "INSTANCE_ENCOUNTER_ENGAGE_UNIT",
+    RAID_BOSS_EMOTE = "RAID_BOSS_EMOTE",
+    SPELLS_CHANGED = "SPELLS_CHANGED",
     CUSTOM = "Custom Event",
 }
 
@@ -60,6 +69,19 @@ TriggerManager.EventHelp = {
     QUEST_TURNED_IN = "Quest completed. Example: return true",
     UNIT_HEALTH = "Args: unit. Example: return UnitHealth(arg1)/UnitHealthMax(arg1) < 0.5",
     UNIT_POWER_UPDATE = "Args: unit, powerType. Example: return powerType=='MANA' and UnitPower(unit)<100",
+    PLAYER_REGEN_DISABLED = "You entered combat. Example: return true",
+    PLAYER_REGEN_ENABLED = "You left combat. Example: return true",
+    PLAYER_DEAD = "When you die. Example: return true",
+    PLAYER_ALIVE = "When you resurrect. Example: return true",
+    BAG_UPDATE = "Your bags changed. Example: return true",
+    PLAYER_MONEY = "Money changed. Example: return GetMoney()>0",
+    QUEST_ACCEPTED = "Quest accepted. Args: questId. Example: return questId==12345",
+    GOSSIP_SHOW = "NPC gossip opened. Example: return true",
+    PLAYER_TARGET_CHANGED = "Target changed. Example: return UnitIsFriend('player','target')",
+    PLAYER_STARTED_MOVING = "Player started moving. Example: return true",
+    PLAYER_STOPPED_MOVING = "Player stopped moving. Example: return true",
+    CHAT_MSG_SAY = "Chat message say. Args: msg. Example: return msg:find('hello')",
+    INSTANCE_ENCOUNTER_ENGAGE_UNIT = "Boss fight started. Example: return true",
 }
 
 -- Initialize and register events for all triggers
