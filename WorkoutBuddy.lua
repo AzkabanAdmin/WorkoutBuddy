@@ -150,8 +150,16 @@ function WorkoutBuddy:OnProfileChanged()
         }
     end
     self:RebuildWorkoutListOptions()
-    if self.RebuildTriggerOptions then self:RebuildTriggerOptions() end
-    if self.RebuildConditionOptions then self:RebuildConditionOptions() end
+    if self.RebuildTriggerOptions then
+        self:RebuildTriggerOptions()
+        local gAuto = self.options.args.general.args.automation.args
+        self:RebuildTriggerOptions(gAuto.triggerList.args, {"general", "automation"})
+    end
+    if self.RebuildConditionOptions then
+        self:RebuildConditionOptions()
+        local gAuto = self.options.args.general.args.automation.args
+        self:RebuildConditionOptions(gAuto.conditionList.args, {"general", "automation", "conditionList"})
+    end
     if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.RegisterEvents then
         WorkoutBuddy.TriggerManager:RegisterEvents()
     end
@@ -208,6 +216,11 @@ end
 function WorkoutBuddy:ForceFullConfigRefresh()
     -- Rebuild options from current profile and update config UI
     self:RebuildWorkoutListOptions()
+    if self.options and self.options.args and self.options.args.general then
+        local gAuto = self.options.args.general.args.automation.args
+        self:RebuildTriggerOptions(gAuto.triggerList.args, {"general", "automation"})
+        self:RebuildConditionOptions(gAuto.conditionList.args, {"general", "automation", "conditionList"})
+    end
     -- If using AceConfigDialog, close and re-open to force UI to update
     if InterfaceOptionsFrame then
         InterfaceOptionsFrame:Hide()

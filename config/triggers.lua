@@ -12,7 +12,8 @@ function WorkoutBuddy_TriggersTab()
             addTrigger = { type="execute", name="Add Trigger", order=3, func=function()
                 local t = WorkoutBuddy.db.profile.triggers
                 t[#t+1] = { name="New Trigger", event="PLAYER_LEVEL_UP", customEvent="" }
-                WorkoutBuddy:RebuildTriggerOptions()
+                WorkoutBuddy:RebuildTriggerOptions(nil, {"triggers"})
+                WorkoutBuddy:RebuildConditionOptions(nil, {"triggers", "conditionList"})
                 AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers")
                 WorkoutBuddy.TriggerManager:RegisterEvents()
             end },
@@ -21,7 +22,7 @@ function WorkoutBuddy_TriggersTab()
             addCondition = { type="execute", name="Add Condition", order=6, func=function()
                 local c = WorkoutBuddy.db.profile.conditions
                 c[#c+1] = { name="New Condition", logic="AND", triggers={}, activity="", action="workout" }
-                WorkoutBuddy:RebuildConditionOptions()
+                WorkoutBuddy:RebuildConditionOptions(nil, {"triggers", "conditionList"})
                 AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers", "conditionList")
             end },
         }

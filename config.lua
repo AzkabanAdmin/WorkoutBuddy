@@ -22,6 +22,10 @@ function WorkoutBuddy:InitConfig()
     self:RebuildWorkoutListOptions()
     self:RebuildTriggerOptions()
     self:RebuildConditionOptions()
+    -- build duplicate automation controls in the General tab
+    local gAuto = self.options.args.general.args.automation.args
+    self:RebuildTriggerOptions(gAuto.triggerList.args, {"general", "automation"})
+    self:RebuildConditionOptions(gAuto.conditionList.args, {"general", "automation", "conditionList"})
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
     self.optionsFrame = AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Workout Buddy")
@@ -82,8 +86,9 @@ function WorkoutBuddy:RebuildWorkoutListOptions()
     end
 end
 
-function WorkoutBuddy:RebuildTriggerOptions()
-    local args = self.options.args.triggers.args.triggerList.args
+function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
+    local args = targetArgs or self.options.args.triggers.args.triggerList.args
+    local selectPath = path or {"triggers"}
     wipe(args)
     local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
     for i, t in ipairs(triggers) do
@@ -133,10 +138,10 @@ function WorkoutBuddy:RebuildTriggerOptions()
                     order = 5,
                     func = function()
                         table.remove(triggers, i)
-                        WorkoutBuddy:RebuildTriggerOptions()
-                        WorkoutBuddy:RebuildConditionOptions()
+                        WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
+                        WorkoutBuddy:RebuildConditionOptions(nil, selectPath)
                         WorkoutBuddy.TriggerManager:RegisterEvents()
-                        AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers")
+                        AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
                     end,
                 },
             },
@@ -144,8 +149,9 @@ function WorkoutBuddy:RebuildTriggerOptions()
     end
 end
 
-function WorkoutBuddy:RebuildConditionOptions()
-    local args = self.options.args.triggers.args.conditionList.args
+function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
+    local args = targetArgs or self.options.args.triggers.args.conditionList.args
+    local selectPath = path or {"triggers", "conditionList"}
     wipe(args)
     local conds = self.db and self.db.profile and self.db.profile.conditions or {}
     for i, c in ipairs(conds) do
@@ -215,8 +221,8 @@ function WorkoutBuddy:RebuildConditionOptions()
                     order = 7,
                     func = function()
                         table.remove(conds, i)
-                        WorkoutBuddy:RebuildConditionOptions()
-                        AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers", "conditionList")
+                        WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)
+                        AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
                     end,
                 },
             },

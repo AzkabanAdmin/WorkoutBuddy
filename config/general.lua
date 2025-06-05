@@ -1,6 +1,33 @@
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
+-- Helper used by both the Automation tab and this General tab
+local function WorkoutBuddy_AutomationGroup(order, name, path)
+    local group = WorkoutBuddy_TriggersTab()
+    group.order = order or group.order
+    if name then group.name = name end
+    local rebuildPath = path or {"triggers"}
+    group.args.addTrigger.func = function()
+        local t = WorkoutBuddy.db.profile.triggers
+        t[#t+1] = { name="New Trigger", event="PLAYER_LEVEL_UP", customEvent="" }
+        WorkoutBuddy:RebuildTriggerOptions(group.args.triggerList.args, rebuildPath)
+        local condPath = {unpack(rebuildPath)}
+        table.insert(condPath, "conditionList")
+        WorkoutBuddy:RebuildConditionOptions(group.args.conditionList.args, condPath)
+        AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(rebuildPath))
+        WorkoutBuddy.TriggerManager:RegisterEvents()
+    end
+    group.args.addCondition.func = function()
+        local c = WorkoutBuddy.db.profile.conditions
+        c[#c+1] = { name="New Condition", logic="AND", triggers={}, activity="", action="workout" }
+        local condPath = {unpack(rebuildPath)}
+        table.insert(condPath, "conditionList")
+        WorkoutBuddy:RebuildConditionOptions(group.args.conditionList.args, condPath)
+        AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(condPath))
+    end
+    return group
+end
+
 
 function WorkoutBuddy_GeneralTab()
     return {
@@ -160,6 +187,12 @@ function WorkoutBuddy_GeneralTab()
                     },
                 },
             },
+            automationHeader = {
+                type = "header",
+                name = "Custom Automation",
+                order = 8,
+            },
+            automation = WorkoutBuddy_AutomationGroup(9, "Automation", {"general", "automation"}),
         },
     }
 end
