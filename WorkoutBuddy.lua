@@ -29,6 +29,8 @@ local defaults = {
             zonechange_zone = false,
             zonechange_indoors = false,
         },
+        triggers = {},
+        conditions = {},
         stats = {},
         hydration = {
             enabled = false,
@@ -92,6 +94,9 @@ function WorkoutBuddy:OnInitialize()
         }
     end
     self:InitConfig()
+    if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.Init then
+        WorkoutBuddy.TriggerManager:Init()
+    end
     WorkoutBuddy.ReminderCore:Init()
     self:RegisterChatCommand("workoutbuddy", "HandleSlashCommand")
     self:RegisterChatCommand("wob", "HandleSlashCommand")
@@ -145,6 +150,11 @@ function WorkoutBuddy:OnProfileChanged()
         }
     end
     self:RebuildWorkoutListOptions()
+    if self.RebuildTriggerOptions then self:RebuildTriggerOptions() end
+    if self.RebuildConditionOptions then self:RebuildConditionOptions() end
+    if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.RegisterEvents then
+        WorkoutBuddy.TriggerManager:RegisterEvents()
+    end
     self:ForceFullConfigRefresh()
 
     if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then

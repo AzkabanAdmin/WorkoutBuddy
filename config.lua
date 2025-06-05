@@ -1,6 +1,7 @@
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
+local TriggerManager = WorkoutBuddy and WorkoutBuddy.TriggerManager
 
 function WorkoutBuddy:InitConfig()
     self.options = {
@@ -9,6 +10,7 @@ function WorkoutBuddy:InitConfig()
         type = "group",
         args = {
             general      = WorkoutBuddy_GeneralTab(),
+            triggers     = WorkoutBuddy_TriggersTab(),
             workouts     = WorkoutBuddy_WorkoutsTab(),
             hydration    = WorkoutBuddy_HydrationTab(),
             stats        = WorkoutBuddy_StatsTab(),
@@ -18,6 +20,8 @@ function WorkoutBuddy:InitConfig()
     }
 
     self:RebuildWorkoutListOptions()
+    self:RebuildTriggerOptions()
+    self:RebuildConditionOptions()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
     self.optionsFrame = AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Workout Buddy")
@@ -71,6 +75,130 @@ function WorkoutBuddy:RebuildWorkoutListOptions()
                         self.db.profile.workouts = newList
                         WorkoutBuddy:RebuildWorkoutListOptions()
                         AceConfigDialog:SelectGroup("WorkoutBuddy", "workouts")
+                    end,
+                },
+            },
+        }
+    end
+end
+
+function WorkoutBuddy:RebuildTriggerOptions()
+    local args = self.options.args.triggers.args.triggerList.args
+    wipe(args)
+    local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
+    for i, t in ipairs(triggers) do
+        args["tr" .. i] = {
+            type = "group",
+            name = t.name or ("Trigger " .. i),
+            inline = true,
+            order = i,
+            args = {
+                name = {
+                    type = "input",
+                    name = "Name",
+                    order = 1,
+                    get = function() return t.name or "" end,
+                    set = function(info, val) t.name = val end,
+                },
+                event = {
+                    type = "select",
+                    name = "Event",
+                    order = 2,
+                    values = TriggerManager.EventList,
+                    get = function() return t.event end,
+                    set = function(info, val) t.event = val; WorkoutBuddy.TriggerManager:RegisterEvents() end,
+                },
+                custom = {
+                    type = "input",
+                    name = "Custom Lua (return true/false)",
+                    multiline = true,
+                    width = "full",
+                    order = 3,
+                    get = function() return t.custom or "" end,
+                    set = function(info, val) t.custom = val end,
+                },
+                remove = {
+                    type = "execute",
+                    name = "Remove",
+                    order = 4,
+                    func = function()
+                        table.remove(triggers, i)
+                        WorkoutBuddy:RebuildTriggerOptions()
+                        WorkoutBuddy:RebuildConditionOptions()
+                        WorkoutBuddy.TriggerManager:RegisterEvents()
+                        AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers")
+                    end,
+                },
+            },
+        }
+    end
+end
+
+function WorkoutBuddy:RebuildConditionOptions()
+    local args = self.options.args.triggers.args.conditionList.args
+    wipe(args)
+    local conds = self.db and self.db.profile and self.db.profile.conditions or {}
+    for i, c in ipairs(conds) do
+        args["cond" .. i] = {
+            type = "group",
+            name = c.name or ("Condition " .. i),
+            inline = true,
+            order = i,
+            args = {
+                name = {
+                    type = "input",
+                    name = "Name",
+                    order = 1,
+                    get = function() return c.name or "" end,
+                    set = function(info, val) c.name = val end,
+                },
+                triggerIds = {
+                    type = "input",
+                    name = "Trigger IDs (comma separated)",
+                    order = 2,
+                    get = function()
+                        return table.concat(c.triggers or {}, ",")
+                    end,
+                    set = function(info, val)
+                        local t = {}
+                        for num in string.gmatch(val, "(%d+)") do
+                            table.insert(t, tonumber(num))
+                        end
+                        c.triggers = t
+                    end,
+                },
+                logic = {
+                    type = "select",
+                    name = "Logic",
+                    order = 3,
+                    values = { AND = "AND", OR = "OR" },
+                    get = function() return c.logic or "AND" end,
+                    set = function(info, val) c.logic = val end,
+                },
+                activity = {
+                    type = "input",
+                    name = "Activity Name",
+                    order = 4,
+                    get = function() return c.activity or "" end,
+                    set = function(info, val) c.activity = val end,
+                },
+                custom = {
+                    type = "input",
+                    name = "Custom Lua (return true/false)",
+                    multiline = true,
+                    width = "full",
+                    order = 5,
+                    get = function() return c.custom or "" end,
+                    set = function(info, val) c.custom = val end,
+                },
+                remove = {
+                    type = "execute",
+                    name = "Remove",
+                    order = 6,
+                    func = function()
+                        table.remove(conds, i)
+                        WorkoutBuddy:RebuildConditionOptions()
+                        AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers", "conditionList")
                     end,
                 },
             },
