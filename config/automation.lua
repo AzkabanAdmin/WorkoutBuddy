@@ -30,13 +30,12 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         self.triggerEditor = nil
     end)
     self.triggerEditor = frame
-    -- Hide the default status bar and reclaim the space it uses
-    if frame.statustext then frame.statustext:Hide() end
-    if frame.statusbg then frame.statusbg:Hide() end
+    -- Use default status bar but adjust content area for our own buttons
     if frame.content then
         frame.content:ClearAllPoints()
+        -- leave room for the status bar at the bottom
         frame.content:SetPoint("TOPLEFT", 17, -27)
-        frame.content:SetPoint("BOTTOMRIGHT", -17, 17)
+        frame.content:SetPoint("BOTTOMRIGHT", -17, 55)
     end
 
     local nameBox = AceGUI:Create("EditBox")
@@ -70,11 +69,17 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     local save = AceGUI:Create("Button")
     save:SetText("Save")
     save:SetWidth(100)
-    frame:AddChild(save)
-    -- move the save button next to the close button
-    save.frame:SetParent(frame.frame)
-    save.frame:ClearAllPoints()
-    save.frame:SetPoint("BOTTOMRIGHT", frame.frame, "BOTTOMRIGHT", -140, 17)
+
+    local closeBtn = AceGUI:Create("Button")
+    closeBtn:SetText("Close")
+    closeBtn:SetWidth(100)
+
+    local btnGroup = AceGUI:Create("SimpleGroup")
+    btnGroup:SetFullWidth(true)
+    btnGroup:SetLayout("Flow")
+    btnGroup:AddChild(save)
+    btnGroup:AddChild(closeBtn)
+    frame:AddChild(btnGroup)
 
     -- Internal helpers
     local function updateFields(val)
@@ -95,14 +100,14 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         local evt = eventDrop:GetValue()
         local tip = WorkoutBuddy.TriggerManager.EventHelp[evt]
         if tip then
-            GameTooltip:SetOwner(eventDrop.frame, "ANCHOR_RIGHT")
+            GameTooltip:SetOwner(eventDrop.dropdown, "ANCHOR_RIGHT")
             GameTooltip:SetText(evt, 1, 1, 1)
             GameTooltip:AddLine(tip, nil, nil, nil, true)
             GameTooltip:Show()
         end
     end
-    eventDrop.frame:SetScript("OnEnter", showEventTip)
-    eventDrop.frame:SetScript("OnLeave", GameTooltip_Hide)
+    eventDrop:SetCallback("OnEnter", showEventTip)
+    eventDrop:SetCallback("OnLeave", GameTooltip_Hide)
     customEvent:SetCallback("OnTextChanged", function(_, _, val) trigger.customEvent = val end)
     luaBox:SetCallback("OnTextChanged", function(_, _, val) trigger.custom = val end)
 
@@ -116,6 +121,9 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         self:ForceFullConfigRefresh()
         frame:Hide()
     end)
+    closeBtn:SetCallback("OnClick", function()
+        frame:Hide()
+    end)
 
-    -- Frame has its own close button
+    -- Buttons sit above the frame's status bar
 end
