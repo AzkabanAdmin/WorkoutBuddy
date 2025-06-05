@@ -80,19 +80,23 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     local function positionSave()
         if frame.closebutton then
             save.frame:SetPoint("TOPRIGHT", frame.closebutton, "TOPLEFT", -4, 0)
+            return true
         else
-            save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -30, -10)
+            -- Wait until the close button is created, then retry
+            return false
         end
     end
-    -- On a fresh reload the AceGUI frame may reposition its children after
-    -- this function runs, so defer the final placement until the next frame
-    -- update and whenever the window is shown.
-    local function deferredPosition()
-        C_Timer.After(0, positionSave)
+
+    -- AceGUI sometimes shows the frame before the close button exists.
+    -- Poll until it appears so the Save button anchors correctly even on first use.
+    local function waitForClose()
+        if not positionSave() then
+            C_Timer.After(0, waitForClose)
+        end
     end
 
-    deferredPosition()
-    frame.frame:HookScript("OnShow", deferredPosition)
+    frame.frame:HookScript("OnShow", waitForClose)
+    waitForClose()
 
     -- Internal helpers
     local function buildEventOptions(evt)
