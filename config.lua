@@ -24,8 +24,8 @@ function WorkoutBuddy:InitConfig()
 
     self:RebuildWorkoutListOptions()
     -- build automation option lists used in the popup window
-    self:RebuildTriggerOptions(self.automationOptions.args.triggerList.args, {"automation"})
-    self:RebuildConditionOptions(self.automationOptions.args.conditionList.args, {"automation", "conditionList"})
+    self:RebuildTriggerOptions(self.automationOptions.args.triggers.args.triggerList.args, {"triggers","triggerList"}, "WorkoutBuddyAutomation")
+    self:RebuildConditionOptions(self.automationOptions.args.conditions.args.conditionList.args, {"conditions","conditionList"}, "WorkoutBuddyAutomation")
     self:RebuildCustomEventToggles()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
@@ -88,9 +88,12 @@ function WorkoutBuddy:RebuildWorkoutListOptions()
     end
 end
 
-function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
-    local args = targetArgs or self.options.args.triggers.args.triggerList.args
+function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path, root)
+    local args = targetArgs
+        or (self.options.args.triggers and self.options.args.triggers.args.triggerList.args)
+        or (self.automationOptions and self.automationOptions.args.triggers.args.triggerList.args)
     local selectPath = path or {"triggers"}
+    local rootName = root or "WorkoutBuddy"
     wipe(args)
     local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
     for i, t in ipairs(triggers) do
@@ -150,9 +153,9 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
                             local tmp = triggers[i]
                             table.remove(triggers, i)
                             table.insert(triggers, i-1, tmp)
-                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
-                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath)
-                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath, rootName)
+                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath, rootName)
+                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
                         end
                     end,
                 },
@@ -166,9 +169,9 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
                             local tmp = triggers[i]
                             table.remove(triggers, i)
                             table.insert(triggers, i+1, tmp)
-                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
-                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath)
-                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath, rootName)
+                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath, rootName)
+                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
                         end
                     end,
                 },
@@ -178,10 +181,10 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
                     order = 7,
                     func = function()
                         table.remove(triggers, i)
-                        WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
-                        WorkoutBuddy:RebuildConditionOptions(nil, selectPath)
+                        WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath, rootName)
+                        WorkoutBuddy:RebuildConditionOptions(nil, selectPath, rootName)
                         WorkoutBuddy.TriggerManager:RegisterEvents()
-                        AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                        AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
                     end,
                 },
             },
@@ -190,9 +193,12 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
     WorkoutBuddy:RebuildCustomEventToggles()
 end
 
-function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
-    local args = targetArgs or self.options.args.triggers.args.conditionList.args
+function WorkoutBuddy:RebuildConditionOptions(targetArgs, path, root)
+    local args = targetArgs
+        or (self.options.args.triggers and self.options.args.triggers.args.conditionList.args)
+        or (self.automationOptions and self.automationOptions.args.conditions.args.conditionList.args)
     local selectPath = path or {"triggers", "conditionList"}
+    local rootName = root or "WorkoutBuddy"
     wipe(args)
     local conds = self.db and self.db.profile and self.db.profile.conditions or {}
     for i, c in ipairs(conds) do
@@ -266,8 +272,8 @@ function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
                             local tmp = conds[i]
                             table.remove(conds, i)
                             table.insert(conds, i-1, tmp)
-                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)
-                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath, rootName)
+                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
                         end
                     end,
                 },
@@ -281,8 +287,8 @@ function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
                             local tmp = conds[i]
                             table.remove(conds, i)
                             table.insert(conds, i+1, tmp)
-                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)
-                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath, rootName)
+                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
                         end
                     end,
                 },
@@ -292,8 +298,8 @@ function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
                     order = 9,
                     func = function()
                         table.remove(conds, i)
-                        WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)
-                        AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                        WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath, rootName)
+                        AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
                     end,
                 },
             },
@@ -343,7 +349,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         target[key .. "Del"] = {
             type = "execute",
             name = "",
-            image = "Interface\\Buttons\\UI-GroupFinder-Decline",
+            image = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up",
             imageWidth = 16,
             imageHeight = 16,
             width = 0.2,

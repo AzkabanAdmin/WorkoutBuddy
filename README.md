@@ -96,7 +96,7 @@ Contains several modules:
 ### Custom Events
 
 Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create advanced triggers and conditions.
-This opens a window where you can add one or more triggers, name the custom event, and define the action.
+This opens the **Custom Events** window where you can add one or more triggers, name the event, and define the action. Press *Okay* to save.
 Each custom event appears in the checkbox list with a small pencil icon for editing and an "X" icon for deletion.
 Conditions can combine triggers using `AND`/`OR` logic and either suggest a workout or open the reminder frame.
 
