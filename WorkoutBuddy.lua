@@ -30,7 +30,6 @@ local defaults = {
             zonechange_indoors = false,
         },
         triggers = {},
-        conditions = {},
         stats = {},
         hydration = {
             enabled = false,
@@ -80,7 +79,6 @@ function WorkoutBuddy:OnInitialize()
     self:InitDB()
     -- ensure new tables exist for older saved variables
     self.db.profile.triggers = self.db.profile.triggers or {}
-    self.db.profile.conditions = self.db.profile.conditions or {}
     if WorkoutBuddy.Sounds and WorkoutBuddy.Sounds.Init then
         WorkoutBuddy.Sounds:Init()
     end
@@ -145,7 +143,6 @@ function WorkoutBuddy:OnProfileChanged()
     local hydFirst = not hydOpts.initialized
     -- Ensure automation tables exist for old profiles
     self.db.profile.triggers = self.db.profile.triggers or {}
-    self.db.profile.conditions = self.db.profile.conditions or {}
     -- Only set defaults if the list is missing or empty
     if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
         self.db.profile.workouts = {
@@ -156,12 +153,6 @@ function WorkoutBuddy:OnProfileChanged()
         }
     end
     self:RebuildWorkoutListOptions()
-    if self.RebuildTriggerOptions then
-        self:RebuildTriggerOptions(nil, {"general","automation","triggers","triggerList"})
-    end
-    if self.RebuildConditionOptions then
-        self:RebuildConditionOptions(nil, {"general","automation","conditions","conditionList"})
-    end
     if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.RegisterEvents then
         WorkoutBuddy.TriggerManager:RegisterEvents()
     end
@@ -218,13 +209,7 @@ end
 function WorkoutBuddy:ForceFullConfigRefresh()
     -- Rebuild options from current profile and update config UI
     self:RebuildWorkoutListOptions()
-    if self.options and self.options.args.general and self.options.args.general.args.automation then
-        self:RebuildTriggerOptions(self.options.args.general.args.automation.args.triggers.args.triggerList.args,
-            {"general","automation","triggers","triggerList"})
-        self:RebuildConditionOptions(self.options.args.general.args.automation.args.conditions.args.conditionList.args,
-            {"general","automation","conditions","conditionList"})
-        self:RebuildCustomEventToggles()
-    end
+    self:RebuildCustomEventToggles()
     -- If using AceConfigDialog, close and re-open to force UI to update
     if InterfaceOptionsFrame then
         InterfaceOptionsFrame:Hide()

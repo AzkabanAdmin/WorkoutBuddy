@@ -20,10 +20,6 @@ function WorkoutBuddy:InitConfig()
     }
 
     self:RebuildWorkoutListOptions()
-    self:RebuildTriggerOptions(self.options.args.general.args.automation.args.triggers.args.triggerList.args,
-        {"general","automation","triggers","triggerList"})
-    self:RebuildConditionOptions(self.options.args.general.args.automation.args.conditions.args.conditionList.args,
-        {"general","automation","conditions","conditionList"})
     self:RebuildCustomEventToggles()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
@@ -85,228 +81,8 @@ function WorkoutBuddy:RebuildWorkoutListOptions()
     end
 end
 
-function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path, root)
-    local args = targetArgs
-        or (self.options.args.general and self.options.args.general.args.automation
-            and self.options.args.general.args.automation.args.triggers.args.triggerList.args)
-    local selectPath = path or {"triggers"}
-    local rootName = root or "WorkoutBuddy"
-    wipe(args)
-    local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
-    for i, t in ipairs(triggers) do
-        args["tr" .. i] = {
-            type = "group",
-            name = t.name or ("Trigger " .. i),
-            inline = true,
-            order = i,
-            args = {
-                name = {
-                    type = "input",
-                    name = "Name",
-                    order = 1,
-                    get = function() return t.name or "" end,
-                    set = function(info, val) t.name = val end,
-                },
-                event = {
-                    type = "select",
-                    name = "Event",
-                    order = 2,
-                    width = 2,
-                    values = TriggerManager.EventList,
-                    get = function() return t.event end,
-                    set = function(info, val)
-                        t.event = val
-                        WorkoutBuddy.TriggerManager:RegisterEvents()
-                    end,
-                },
-                customEvent = {
-                    type = "input",
-                    name = "Custom Event Name",
-                    order = 3,
-                    width = 1.8,
-                    hidden = function() return t.event ~= "CUSTOM" end,
-                    get = function() return t.customEvent or "" end,
-                    set = function(info, val)
-                        t.customEvent = val
-                        WorkoutBuddy.TriggerManager:RegisterEvents()
-                    end,
-                },
-                custom = {
-                    type = "input",
-                    name = "Custom Lua (return true/false)",
-                    multiline = true,
-                    width = "full",
-                    order = 4,
-                    hidden = function() return t.event ~= "CUSTOM" end,
-                    get = function() return t.custom or "" end,
-                    set = function(info, val) t.custom = val end,
-                },
-                up = {
-                    type = "execute",
-                    name = "Up",
-                    order = 5,
-                    disabled = function() return i == 1 end,
-                    func = function()
-                        if i > 1 then
-                            local tmp = triggers[i]
-                            table.remove(triggers, i)
-                            table.insert(triggers, i-1, tmp)
-                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath, rootName)
-                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath, rootName)
-                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
-                        end
-                    end,
-                },
-                down = {
-                    type = "execute",
-                    name = "Down",
-                    order = 6,
-                    disabled = function() return i == #triggers end,
-                    func = function()
-                        if i < #triggers then
-                            local tmp = triggers[i]
-                            table.remove(triggers, i)
-                            table.insert(triggers, i+1, tmp)
-                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath, rootName)
-                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath, rootName)
-                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
-                        end
-                    end,
-                },
-                remove = {
-                    type = "execute",
-                    name = "Remove",
-                    order = 7,
-                    func = function()
-                        table.remove(triggers, i)
-                        WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath, rootName)
-                        WorkoutBuddy:RebuildConditionOptions(nil, selectPath, rootName)
-                        WorkoutBuddy.TriggerManager:RegisterEvents()
-                        AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
-                    end,
-                },
-            },
-        }
-    end
-    WorkoutBuddy:RebuildCustomEventToggles()
-end
 
-function WorkoutBuddy:RebuildConditionOptions(targetArgs, path, root)
-    local args = targetArgs
-        or (self.options.args.general and self.options.args.general.args.automation
-            and self.options.args.general.args.automation.args.conditions.args.conditionList.args)
-    local selectPath = path or {"triggers", "conditionList"}
-    local rootName = root or "WorkoutBuddy"
-    wipe(args)
-    local conds = self.db and self.db.profile and self.db.profile.conditions or {}
-    for i, c in ipairs(conds) do
-        args["cond" .. i] = {
-            type = "group",
-            name = c.name or ("Condition " .. i),
-            inline = true,
-            order = i,
-            args = {
-                name = {
-                    type = "input",
-                    name = "Name",
-                    order = 1,
-                    get = function() return c.name or "" end,
-                    set = function(info, val) c.name = val end,
-                },
-                triggerIds = {
-                    type = "input",
-                    name = "Trigger IDs (comma separated)",
-                    order = 2,
-                    get = function()
-                        return table.concat(c.triggers or {}, ",")
-                    end,
-                    set = function(info, val)
-                        local t = {}
-                        for num in string.gmatch(val, "(%d+)") do
-                            table.insert(t, tonumber(num))
-                        end
-                        c.triggers = t
-                    end,
-                },
-                logic = {
-                    type = "select",
-                    name = "Logic",
-                    order = 3,
-                    values = { AND = "AND", OR = "OR" },
-                    get = function() return c.logic or "AND" end,
-                    set = function(info, val) c.logic = val end,
-                },
-                activity = {
-                    type = "input",
-                    name = "Activity Name",
-                    order = 4,
-                    get = function() return c.activity or "" end,
-                    set = function(info, val) c.activity = val end,
-                },
-                action = {
-                    type = "select",
-                    name = "Action",
-                    order = 5,
-                    values = { workout = "Suggest Workout", open_frame = "Open Reminder Frame" },
-                    get = function() return c.action or "workout" end,
-                    set = function(info, val) c.action = val end,
-                },
-                custom = {
-                    type = "input",
-                    name = "Custom Lua (return true/false)",
-                    multiline = true,
-                    width = "full",
-                    order = 6,
-                    get = function() return c.custom or "" end,
-                    set = function(info, val) c.custom = val end,
-                },
-                up = {
-                    type = "execute",
-                    name = "Up",
-                    order = 7,
-                    disabled = function() return i == 1 end,
-                    func = function()
-                        if i > 1 then
-                            local tmp = conds[i]
-                            table.remove(conds, i)
-                            table.insert(conds, i-1, tmp)
-                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath, rootName)
-                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
-                        end
-                    end,
-                },
-                down = {
-                    type = "execute",
-                    name = "Down",
-                    order = 8,
-                    disabled = function() return i == #conds end,
-                    func = function()
-                        if i < #conds then
-                            local tmp = conds[i]
-                            table.remove(conds, i)
-                            table.insert(conds, i+1, tmp)
-                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath, rootName)
-                            AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
-                        end
-                    end,
-                },
-                remove = {
-                    type = "execute",
-                    name = "Remove",
-                    order = 9,
-                    func = function()
-                        table.remove(conds, i)
-                        WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath, rootName)
-                        AceConfigDialog:SelectGroup(rootName, unpack(selectPath))
-                    end,
-                },
-            },
-        }
-    end
-    WorkoutBuddy:RebuildCustomEventToggles()
-end
-
--- Build checkboxes for custom conditions in the General tab
+-- Build checkboxes for custom triggers in the General tab
 function WorkoutBuddy:RebuildCustomEventToggles()
     if not self.options or not self.options.args.general then return end
     local actArgs = self.options.args.general.args.eventTriggers.args
@@ -320,9 +96,9 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         if k:match("^custom") then openArgs[k] = nil end
     end
 
-    local conds = self.db and self.db.profile and self.db.profile.conditions or {}
+    local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
     local aIdx, oIdx = 10, 10
-    for id, c in ipairs(conds) do
+    for id, c in ipairs(triggers) do
         local target = (c.action == "open_frame") and openArgs or actArgs
         local idx = (c.action == "open_frame") and oIdx or aIdx
         local key = "custom" .. id
@@ -342,7 +118,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
             imageHeight = 16,
             width = 0.2,
             order = idx + 0.1,
-            func = function() WorkoutBuddy:OpenAutomationOptions() end,
+            func = function() WorkoutBuddy:OpenTriggerEditor(nil, id) end,
         }
         target[key .. "Del"] = {
             type = "execute",
@@ -355,7 +131,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
             confirm = true,
             confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",
             func = function()
-                table.remove(conds, id)
+                table.remove(triggers, id)
                 WorkoutBuddy.TriggerManager:RegisterEvents()
                 WorkoutBuddy:RebuildCustomEventToggles()
             end,
@@ -368,13 +144,3 @@ function WorkoutBuddy:OpenConfig(input)
     AceConfigDialog:Open("WorkoutBuddy")
 end
 
-function WorkoutBuddy:OpenAutomationOptions(target)
-    AceConfigDialog:Open("WorkoutBuddy")
-    local path = {"general", "automation"}
-    if target == "triggers" or target == "conditions" then
-        table.insert(path, target)
-    else
-        table.insert(path, "conditions")
-    end
-    AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(path))
-end

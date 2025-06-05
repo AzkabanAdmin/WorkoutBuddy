@@ -95,10 +95,9 @@ Contains several modules:
 
 ### Custom Events
 
-Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create advanced triggers and conditions.
-The automation editor now lives in the General tab under **Custom Automation** and lets you add triggers or conditions directly.
-Press *Save* when finished. Each custom event appears in the list with pencil and X icons for editing or removal.
-Conditions can combine triggers using `AND`/`OR` logic and either suggest a workout or open the reminder frame.
+Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create custom triggers.
+A simple popup lets you name the trigger, pick a game event, and optionally enter Lua code that returns `true` or `false`.
+Press **Save** to add the trigger. Each custom event then shows as a checkbox with pencil and X icons for editing or deletion.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.
