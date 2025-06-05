@@ -60,7 +60,8 @@ function ReminderEvents:Register()
 
         if type(condition) == "function" then
             if event == "TAXIMAP_CLOSED" or event == "PLAYER_CONTROL_LOST" then
-                C_Timer.After(0.1, function()
+                -- wait a moment so UnitOnTaxi() returns true if we actually took the flight
+                C_Timer.After(1, function()
                     local hasItems = QueueHasItems()
                     if condition() and (hasItems or (ReminderEvents.openWhenEmpty and QueueIsEmpty())) then
                         WorkoutBuddy:DbgPrint(event .. " triggers Reminder Frame.")

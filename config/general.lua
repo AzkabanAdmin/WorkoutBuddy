@@ -203,6 +203,22 @@ function WorkoutBuddy_GeneralTab()
                     -- custom open triggers inserted dynamically
                 },
             },
+            openEmpty = {
+                type = "toggle",
+                name = "Open When No Activities",
+                desc = "Also show the reminder frame when the queue is empty.",
+                width = "full",
+                order = 6.1,
+                get = function()
+                    return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.open_empty or false
+                end,
+                set = function(info, val)
+                    WorkoutBuddy.db.profile.reminder_events.open_empty = val
+                    if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
+                        WorkoutBuddy.ReminderEvents:Register()
+                    end
+                end,
+            },
             addCustomOpen = {
                 type = "execute",
                 name = "Add Auto-Open Event",
