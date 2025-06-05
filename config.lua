@@ -116,6 +116,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         target[key] = EventBox(idx, {
             type = "toggle",
             name = c.name or ("Custom " .. id),
+            desc = WorkoutBuddy.TriggerManager.EventHelp[c.event] or nil,
             width = 0.8,
             order = 1,
             get = function() return c.enabled ~= false end,

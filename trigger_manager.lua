@@ -54,6 +54,14 @@ TriggerManager.EventList = {
     CUSTOM = "Custom Event",
 }
 
+TriggerManager.EventHelp = {
+    PLAYER_LEVEL_UP = "Fires when you gain a level. Example condition: return true",
+    PLAYER_XP_UPDATE = "Your XP changed. Example: return UnitXP('player') % UnitXPMax('player') == 0",
+    QUEST_TURNED_IN = "Quest completed. Example: return true",
+    UNIT_HEALTH = "Args: unit. Example: return UnitHealth(arg1)/UnitHealthMax(arg1) < 0.5",
+    UNIT_POWER_UPDATE = "Args: unit, powerType. Example: return powerType=='MANA' and UnitPower(unit)<100",
+}
+
 -- Initialize and register events for all triggers
 function TriggerManager:Init()
     self:RegisterEvents()

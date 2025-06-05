@@ -30,9 +30,14 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         self.triggerEditor = nil
     end)
     self.triggerEditor = frame
-    -- Hide the default status bar to avoid an empty gray strip at the bottom
+    -- Hide the default status bar and reclaim the space it uses
     if frame.statustext then frame.statustext:Hide() end
     if frame.statusbg then frame.statusbg:Hide() end
+    if frame.content then
+        frame.content:ClearAllPoints()
+        frame.content:SetPoint("TOPLEFT", 17, -27)
+        frame.content:SetPoint("BOTTOMRIGHT", -17, 17)
+    end
 
     local nameBox = AceGUI:Create("EditBox")
     nameBox:SetLabel("Name")
@@ -45,7 +50,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     eventDrop:SetLabel("Event")
     eventDrop:SetList(self.TriggerManager.EventList)
     eventDrop:SetValue(trigger.event)
-    eventDrop:SetWidth(340)
+    eventDrop:SetWidth(360)
     frame:AddChild(eventDrop)
 
     local customEvent = AceGUI:Create("EditBox")
@@ -85,6 +90,19 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         trigger.event = val
         updateFields(val)
     end)
+    -- Tooltip showing help for selected event
+    local function showEventTip()
+        local evt = eventDrop:GetValue()
+        local tip = WorkoutBuddy.TriggerManager.EventHelp[evt]
+        if tip then
+            GameTooltip:SetOwner(eventDrop.frame, "ANCHOR_RIGHT")
+            GameTooltip:SetText(evt, 1, 1, 1)
+            GameTooltip:AddLine(tip, nil, nil, nil, true)
+            GameTooltip:Show()
+        end
+    end
+    eventDrop.frame:SetScript("OnEnter", showEventTip)
+    eventDrop.frame:SetScript("OnLeave", GameTooltip_Hide)
     customEvent:SetCallback("OnTextChanged", function(_, _, val) trigger.customEvent = val end)
     luaBox:SetCallback("OnTextChanged", function(_, _, val) trigger.custom = val end)
 
