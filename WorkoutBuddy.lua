@@ -12,6 +12,32 @@ if _G.WorkoutBuddy_Hydration then
 end
 WorkoutBuddy.DEBUG = false
 
+-- Utility to copy text to the system clipboard or show a dialog
+function WorkoutBuddy:CopyToClipboard(text)
+    if C_Clipboard and C_Clipboard.SetClipboard then
+        C_Clipboard.SetClipboard(text)
+        self:Print("Link copied to clipboard!")
+    else
+        if not StaticPopupDialogs["WORKOUTBUDDY_COPY"] then
+            StaticPopupDialogs["WORKOUTBUDDY_COPY"] = {
+                text = "Press Ctrl-C to copy:",
+                button1 = CLOSE,
+                hasEditBox = true,
+                editBoxWidth = 350,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                OnShow = function(popup, data)
+                    popup.editBox:SetText(data or "")
+                    popup.editBox:SetFocus()
+                    popup.editBox:HighlightText()
+                end,
+            }
+        end
+        StaticPopup_Show("WORKOUTBUDDY_COPY", nil, nil, text)
+    end
+end
+
 function WorkoutBuddy:DbgPrint(...)
     if self.DEBUG then
         print("[WorkoutBuddy]", ...)
@@ -29,6 +55,7 @@ local defaults = {
             zonechange_zone = false,
             zonechange_indoors = false,
         },
+        triggers = {},
         stats = {},
         hydration = {
             enabled = false,
@@ -76,6 +103,8 @@ end
 
 function WorkoutBuddy:OnInitialize()
     self:InitDB()
+    -- ensure new tables exist for older saved variables
+    self.db.profile.triggers = self.db.profile.triggers or {}
     if WorkoutBuddy.Sounds and WorkoutBuddy.Sounds.Init then
         WorkoutBuddy.Sounds:Init()
     end
@@ -92,6 +121,9 @@ function WorkoutBuddy:OnInitialize()
         }
     end
     self:InitConfig()
+    if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.Init then
+        WorkoutBuddy.TriggerManager:Init()
+    end
     WorkoutBuddy.ReminderCore:Init()
     self:RegisterChatCommand("workoutbuddy", "HandleSlashCommand")
     self:RegisterChatCommand("wob", "HandleSlashCommand")
@@ -135,6 +167,8 @@ function WorkoutBuddy:OnProfileChanged()
         self.db.profile.hydration = hydOpts
     end
     local hydFirst = not hydOpts.initialized
+    -- Ensure automation tables exist for old profiles
+    self.db.profile.triggers = self.db.profile.triggers or {}
     -- Only set defaults if the list is missing or empty
     if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
         self.db.profile.workouts = {
@@ -145,6 +179,9 @@ function WorkoutBuddy:OnProfileChanged()
         }
     end
     self:RebuildWorkoutListOptions()
+    if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.RegisterEvents then
+        WorkoutBuddy.TriggerManager:RegisterEvents()
+    end
     self:ForceFullConfigRefresh()
 
     if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
@@ -198,6 +235,9 @@ end
 function WorkoutBuddy:ForceFullConfigRefresh()
     -- Rebuild options from current profile and update config UI
     self:RebuildWorkoutListOptions()
+    self:RebuildCustomEventToggles()
+    local reg = LibStub("AceConfigRegistry-3.0", true)
+    if reg then reg:NotifyChange("WorkoutBuddy") end
     -- If using AceConfigDialog, close and re-open to force UI to update
     if InterfaceOptionsFrame then
         InterfaceOptionsFrame:Hide()

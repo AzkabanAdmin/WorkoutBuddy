@@ -1,8 +1,21 @@
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
+local TriggerManager = WorkoutBuddy and WorkoutBuddy.TriggerManager
+
+-- Helper to wrap event toggles in their own inline container
+local function EventBox(order, toggle)
+    return {
+        type = "group",
+        inline = true,
+        name = "",
+        order = order,
+        args = { toggle = toggle },
+    }
+end
 
 function WorkoutBuddy:InitConfig()
+
     self.options = {
         name = "Workout Buddy",
         handler = WorkoutBuddy,
@@ -18,6 +31,7 @@ function WorkoutBuddy:InitConfig()
     }
 
     self:RebuildWorkoutListOptions()
+    self:RebuildCustomEventToggles()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
     self.optionsFrame = AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Workout Buddy")
@@ -78,6 +92,67 @@ function WorkoutBuddy:RebuildWorkoutListOptions()
     end
 end
 
+
+-- Build checkboxes for custom triggers in the General tab
+function WorkoutBuddy:RebuildCustomEventToggles()
+    if not self.options or not self.options.args.general then return end
+    local actArgs = self.options.args.general.args.eventTriggers.args
+    local openArgs = self.options.args.general.args.openEvents.args
+
+    -- remove old entries
+    for k in pairs(actArgs) do
+        if k:match("^custom") then actArgs[k] = nil end
+    end
+    for k in pairs(openArgs) do
+        if k:match("^custom") then openArgs[k] = nil end
+    end
+
+    local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
+    local aIdx, oIdx = 10, 10
+    for id, c in ipairs(triggers) do
+        local target = (c.action == "open_frame") and openArgs or actArgs
+        local idx = (c.action == "open_frame") and oIdx or aIdx
+        local key = "custom" .. id
+        target[key] = EventBox(idx, {
+            type = "toggle",
+            name = c.name or ("Custom " .. id),
+            desc = WorkoutBuddy.TriggerManager.EventHelp[c.event] or nil,
+            width = 0.8,
+            order = 1,
+            get = function() return c.enabled ~= false end,
+            set = function(info, val) c.enabled = val end,
+        })
+        target[key].args.edit = {
+            type = "execute",
+            name = "",
+            image = "Interface\\Buttons\\UI-GuildButton-PublicNote-Up",
+            imageWidth = 16,
+            imageHeight = 16,
+            width = 0.1,
+            order = 1.1,
+            func = function() WorkoutBuddy:OpenTriggerEditor(nil, id) end,
+        }
+        target[key].args.del = {
+            type = "execute",
+            name = "",
+            image = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",
+            imageWidth = 16,
+            imageHeight = 16,
+            width = 0.1,
+            order = 1.2,
+            confirm = true,
+            confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",
+            func = function()
+                table.remove(triggers, id)
+                WorkoutBuddy.TriggerManager:RegisterEvents()
+                WorkoutBuddy:RebuildCustomEventToggles()
+            end,
+        }
+        if c.action == "open_frame" then oIdx = oIdx + 1 else aIdx = aIdx + 1 end
+    end
+end
+
 function WorkoutBuddy:OpenConfig(input)
     AceConfigDialog:Open("WorkoutBuddy")
 end
+
