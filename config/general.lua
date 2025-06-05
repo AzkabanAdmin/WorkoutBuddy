@@ -25,7 +25,7 @@ function WorkoutBuddy_GeneralTab()
             },
             eventTriggersHeader = {
                 type = "header",
-                name = "Event Triggers",
+                name = "Workout Event Triggers",
                 order = 2,
             },
             eventTriggers = {
@@ -100,19 +100,6 @@ function WorkoutBuddy_GeneralTab()
                 inline = true,
                 order = 5,
                 args = {
-                    autocenter = {
-                        type = "toggle",
-                        name = "Auto center when off-screen",
-                        order = 1,
-                        get = function()
-                            local opts = WorkoutBuddy.ReminderState.getProfileOpts()
-                            return opts.autocenter ~= false
-                        end,
-                        set = function(info, val)
-                            local opts = WorkoutBuddy.ReminderState.getProfileOpts()
-                            opts.autocenter = val
-                        end,
-                    },
                     centerNow = {
                         type = "execute",
                         name = "Center Frame Now",
