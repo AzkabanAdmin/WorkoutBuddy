@@ -2,33 +2,59 @@ WorkoutBuddy:DbgPrint("Loaded: reminder_events.lua")
 
 local ReminderEvents = {}
 
-function ReminderEvents:Register()
-    local eventFrame = CreateFrame("Frame")
+-- Helper to see if any workouts are queued
+local function QueueHasItems()
+    local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
+    return q and #q > 0
+end
 
-    -- Just add more events and conditions here as needed
-    local eventsToRegister = {
-        PLAYER_ENTERING_WORLD = true,
-        QUEST_FINISHED = true,
-        PLAYER_UPDATE_RESTING = IsResting,
-        TAXIMAP_CLOSED = function() return UnitOnTaxi("player") end,
-        PLAYER_CONTROL_LOST = function() return UnitOnTaxi("player") end,
-        -- Add more!
-    }
+-- Build a mapping of events -> condition functions based on user settings
+local function BuildEventMap()
+    local opts = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.reminder_events or {}
+    local map = {}
 
-    for evt in pairs(eventsToRegister) do
-        eventFrame:RegisterEvent(evt)
+    -- Always show queued workouts when logging in
+    map["PLAYER_ENTERING_WORLD"] = true
+
+    if opts.quest then
+        map["QUEST_FINISHED"] = true
     end
 
-    eventFrame:SetScript("OnEvent", function(_, event, ...)
-        local condition = eventsToRegister[event]
+    if opts.rested then
+        map["PLAYER_UPDATE_RESTING"] = IsResting
+    end
+
+    if opts.taxi then
+        local checkTaxi = function() return UnitOnTaxi("player") end
+        map["TAXIMAP_CLOSED"] = checkTaxi
+        map["PLAYER_CONTROL_LOST"] = checkTaxi
+    end
+
+    return map
+end
+
+function ReminderEvents:Register()
+    if self.frame then
+        self.frame:UnregisterAllEvents()
+    else
+        self.frame = CreateFrame("Frame")
+    end
+
+    self.events = BuildEventMap()
+
+    for evt in pairs(self.events) do
+        self.frame:RegisterEvent(evt)
+    end
+
+    self.frame:SetScript("OnEvent", function(_, event, ...)
+        local condition = self.events[event]
         local shouldTrigger = false
 
         if type(condition) == "function" then
-            -- For taxi, need short delay for status to update
             if event == "TAXIMAP_CLOSED" or event == "PLAYER_CONTROL_LOST" then
                 C_Timer.After(0.1, function()
-                    if condition() then
-                        WorkoutBuddy:DbgPrint(event .. " (conditional) triggers Reminder Frame.")
+                    if condition() and QueueHasItems() then
+                        WorkoutBuddy:DbgPrint(event .. " triggers Reminder Frame.")
                         if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then
                             WorkoutBuddy.ReminderCore:ShowIfAllowed()
                         end
@@ -39,10 +65,10 @@ function ReminderEvents:Register()
                 shouldTrigger = condition()
             end
         else
-            shouldTrigger = true
+            shouldTrigger = condition
         end
 
-        if shouldTrigger then
+        if shouldTrigger and QueueHasItems() then
             WorkoutBuddy:DbgPrint(event .. " triggers Reminder Frame.")
             if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then
                 WorkoutBuddy.ReminderCore:ShowIfAllowed()
@@ -52,3 +78,4 @@ function ReminderEvents:Register()
 end
 
 WorkoutBuddy.ReminderEvents = ReminderEvents
+

@@ -102,6 +102,64 @@ function WorkoutBuddy_GeneralTab()
                     },
                 },
             },
+            openEventsHeader = {
+                type = "header",
+                name = "Auto-Open Events",
+                order = 6,
+            },
+            openEvents = {
+                type = "group",
+                name = "Open Reminder Frame Automatically",
+                inline = true,
+                order = 7,
+                args = {
+                    taxi = {
+                        type = "toggle",
+                        name = "On Flight Path",
+                        desc = "Show the reminder frame while on a taxi if workouts are queued.",
+                        order = 1,
+                        get = function()
+                            return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.taxi or false
+                        end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.reminder_events.taxi = val
+                            if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
+                                WorkoutBuddy.ReminderEvents:Register()
+                            end
+                        end,
+                    },
+                    rested = {
+                        type = "toggle",
+                        name = "When Rested",
+                        desc = "Show the reminder frame when becoming rested and workouts are queued.",
+                        order = 2,
+                        get = function()
+                            return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.rested or false
+                        end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.reminder_events.rested = val
+                            if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
+                                WorkoutBuddy.ReminderEvents:Register()
+                            end
+                        end,
+                    },
+                    quest = {
+                        type = "toggle",
+                        name = "Quest Turn-in",
+                        desc = "Show the reminder frame after turning in a quest if workouts are queued.",
+                        order = 3,
+                        get = function()
+                            return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.quest or false
+                        end,
+                        set = function(info, val)
+                            WorkoutBuddy.db.profile.reminder_events.quest = val
+                            if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
+                                WorkoutBuddy.ReminderEvents:Register()
+                            end
+                        end,
+                    },
+                },
+            },
         },
     }
 end
