@@ -30,12 +30,11 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         self.triggerEditor = nil
     end)
     self.triggerEditor = frame
-    -- Use default status bar but adjust content area for our own buttons
+    -- Use default layout spacing
     if frame.content then
         frame.content:ClearAllPoints()
-        -- leave room for the status bar at the bottom
         frame.content:SetPoint("TOPLEFT", 17, -27)
-        frame.content:SetPoint("BOTTOMRIGHT", -17, 45)
+        frame.content:SetPoint("BOTTOMRIGHT", -17, 40)
     end
 
     local nameBox = AceGUI:Create("EditBox")
@@ -77,26 +76,8 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     frame:AddChild(save)
     save.frame:SetParent(frame.frame)
     save.frame:ClearAllPoints()
-    local function positionSave()
-        if frame.closebutton then
-            save.frame:SetPoint("TOPRIGHT", frame.closebutton, "TOPLEFT", -4, 0)
-            return true
-        else
-            -- Wait until the close button is created, then retry
-            return false
-        end
-    end
-
-    -- AceGUI sometimes shows the frame before the close button exists.
-    -- Poll until it appears so the Save button anchors correctly even on first use.
-    local function waitForClose()
-        if not positionSave() then
-            C_Timer.After(0, waitForClose)
-        end
-    end
-
-    frame.frame:HookScript("OnShow", waitForClose)
-    waitForClose()
+    -- Anchor Save beside the window's close button
+    save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -50, -6)
 
     -- Internal helpers
     local function buildEventOptions(evt)
