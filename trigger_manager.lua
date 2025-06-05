@@ -134,7 +134,7 @@ end
 function TriggerManager:EvaluateConditions()
     local conds = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.conditions or {}
     for _, cond in ipairs(conds) do
-        if self:CheckCondition(cond) then
+        if cond.enabled ~= false and self:CheckCondition(cond) then
             local action = cond.action or "workout"
             if action == "open_frame" then
                 if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then

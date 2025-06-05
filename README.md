@@ -93,16 +93,13 @@ Contains several modules:
 - **To add new triggers:**
   Modify `events.lua` or `reminder_events.lua`.
 
-### Automation
+### Custom Events
 
-The *Automation* tab lets you create custom triggers and conditions, similar to WeakAuras.
-A condensed set of these controls also appears in the General tab so you can tweak
-triggers alongside the built-in event checkboxes. Each trigger listens for a game event
-and can run optional Lua code. Conditions combine multiple triggers using `AND`/`OR`
-logic and can either suggest a workout or open the reminder frame. Use this system for
-advanced workflows without editing code.
-You can reorder triggers and conditions with **Up** and **Down** buttons, and the event
-dropdown now offers a larger selection including quest, combat and bag events.
+Use the **Add Custom Event** buttons in the General tab to create advanced triggers and conditions.
+This opens a separate window where you can edit triggers (events) and combine them
+into conditions using `AND`/`OR` logic. Conditions may either suggest a workout or
+open the reminder frame. Each custom event appears as a checkbox next to the built-in
+options so you can enable, edit, or delete it at any time.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.

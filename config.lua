@@ -4,13 +4,16 @@ local AceDBOptions = LibStub("AceDBOptions-3.0")
 local TriggerManager = WorkoutBuddy and WorkoutBuddy.TriggerManager
 
 function WorkoutBuddy:InitConfig()
+    -- automation options are registered separately and opened from the General
+    -- tab via a button
+    self.automationOptions = WorkoutBuddy_TriggersTab()
+
     self.options = {
         name = "Workout Buddy",
         handler = WorkoutBuddy,
         type = "group",
         args = {
             general      = WorkoutBuddy_GeneralTab(),
-            triggers     = WorkoutBuddy_TriggersTab(),
             workouts     = WorkoutBuddy_WorkoutsTab(),
             hydration    = WorkoutBuddy_HydrationTab(),
             stats        = WorkoutBuddy_StatsTab(),
@@ -20,14 +23,13 @@ function WorkoutBuddy:InitConfig()
     }
 
     self:RebuildWorkoutListOptions()
-    self:RebuildTriggerOptions()
-    self:RebuildConditionOptions()
-    -- build duplicate automation controls in the General tab
-    local gAuto = self.options.args.general.args.automation.args
-    self:RebuildTriggerOptions(gAuto.triggerList.args, {"general", "automation"})
-    self:RebuildConditionOptions(gAuto.conditionList.args, {"general", "automation", "conditionList"})
+    -- build automation option lists used in the popup window
+    self:RebuildTriggerOptions(self.automationOptions.args.triggerList.args, {"automation"})
+    self:RebuildConditionOptions(self.automationOptions.args.conditionList.args, {"automation", "conditionList"})
+    self:RebuildCustomEventToggles()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
+    AceConfig:RegisterOptionsTable("WorkoutBuddyAutomation", self.automationOptions)
     self.optionsFrame = AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Workout Buddy")
     AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Profiles", "Workout Buddy", "profile")
 end
@@ -185,6 +187,7 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
             },
         }
     end
+    WorkoutBuddy:RebuildCustomEventToggles()
 end
 
 function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
@@ -296,8 +299,65 @@ function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
             },
         }
     end
+    WorkoutBuddy:RebuildCustomEventToggles()
+end
+
+-- Build checkboxes for custom conditions in the General tab
+function WorkoutBuddy:RebuildCustomEventToggles()
+    if not self.options or not self.options.args.general then return end
+    local actArgs = self.options.args.general.args.eventTriggers.args
+    local openArgs = self.options.args.general.args.openEvents.args
+
+    -- remove old entries
+    for k in pairs(actArgs) do
+        if k:match("^custom") then actArgs[k] = nil end
+    end
+    for k in pairs(openArgs) do
+        if k:match("^custom") then openArgs[k] = nil end
+    end
+
+    local conds = self.db and self.db.profile and self.db.profile.conditions or {}
+    local aIdx, oIdx = 10, 10
+    for id, c in ipairs(conds) do
+        local target = (c.action == "open_frame") and openArgs or actArgs
+        local idx = (c.action == "open_frame") and oIdx or aIdx
+        local key = "custom" .. id
+        target[key] = {
+            type = "toggle",
+            name = c.name or ("Custom " .. id),
+            order = idx,
+            width = 1.2,
+            get = function() return c.enabled ~= false end,
+            set = function(info, val) c.enabled = val end,
+        }
+        target[key .. "Edit"] = {
+            type = "execute",
+            name = "Edit",
+            width = 0.6,
+            order = idx + 0.1,
+            func = function() WorkoutBuddy:OpenAutomationOptions() end,
+        }
+        target[key .. "Del"] = {
+            type = "execute",
+            name = "Delete",
+            width = 0.7,
+            order = idx + 0.2,
+            confirm = true,
+            confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",
+            func = function()
+                table.remove(conds, id)
+                WorkoutBuddy.TriggerManager:RegisterEvents()
+                WorkoutBuddy:RebuildCustomEventToggles()
+            end,
+        }
+        if c.action == "open_frame" then oIdx = oIdx + 1 else aIdx = aIdx + 1 end
+    end
 end
 
 function WorkoutBuddy:OpenConfig(input)
     AceConfigDialog:Open("WorkoutBuddy")
+end
+
+function WorkoutBuddy:OpenAutomationOptions()
+    AceConfigDialog:Open("WorkoutBuddyAutomation")
 end
