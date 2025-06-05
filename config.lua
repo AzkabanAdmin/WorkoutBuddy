@@ -3,6 +3,17 @@ local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
 local TriggerManager = WorkoutBuddy and WorkoutBuddy.TriggerManager
 
+-- Helper to wrap event toggles in their own inline container
+local function EventBox(order, toggle)
+    return {
+        type = "group",
+        inline = true,
+        name = "",
+        order = order,
+        args = { toggle = toggle },
+    }
+end
+
 function WorkoutBuddy:InitConfig()
 
     self.options = {
@@ -102,32 +113,32 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         local target = (c.action == "open_frame") and openArgs or actArgs
         local idx = (c.action == "open_frame") and oIdx or aIdx
         local key = "custom" .. id
-        target[key] = {
+        target[key] = EventBox(idx, {
             type = "toggle",
             name = c.name or ("Custom " .. id),
-            order = idx,
-            width = 1.0,
+            width = "full",
+            order = 1,
             get = function() return c.enabled ~= false end,
             set = function(info, val) c.enabled = val end,
-        }
-        target[key .. "Edit"] = {
+        })
+        target[key].args.edit = {
             type = "execute",
             name = "",
             image = "Interface\\Buttons\\UI-GuildButton-PublicNote-Up",
             imageWidth = 16,
             imageHeight = 16,
             width = 0.1,
-            order = idx + 0.01,
+            order = 1.1,
             func = function() WorkoutBuddy:OpenTriggerEditor(nil, id) end,
         }
-        target[key .. "Del"] = {
+        target[key].args.del = {
             type = "execute",
             name = "",
             image = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",
             imageWidth = 16,
             imageHeight = 16,
             width = 0.1,
-            order = idx + 0.02,
+            order = 1.2,
             confirm = true,
             confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",
             func = function()

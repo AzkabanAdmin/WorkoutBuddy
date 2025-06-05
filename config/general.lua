@@ -1,6 +1,17 @@
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
+-- Helper to create a small boxed container around an event option
+local function EventBox(order, toggle)
+    return {
+        type = "group",
+        inline = true,
+        name = "",
+        order = order,
+        args = { toggle = toggle },
+    }
+end
+
 function WorkoutBuddy_GeneralTab()
     return {
         type = "group",
@@ -23,46 +34,51 @@ function WorkoutBuddy_GeneralTab()
                 inline = true,
                 order = 3,
                 args = {
-                    levelup = {
+                    levelup = EventBox(1, {
                         type = "toggle",
                         name = "Level Up",
                         desc = "Trigger a workout when you gain a level.",
+                        width = "full",
                         order = 1,
                         get = function() return WorkoutBuddy.db and WorkoutBuddy.db.profile.event_map.levelup or false end,
                         set = function(info, val) WorkoutBuddy.db.profile.event_map.levelup = val end,
-                    },
-                    xpbubble = {
+                    }),
+                    xpbubble = EventBox(2, {
                         type = "toggle",
                         name = "XP Bubble",
                         desc = "Trigger a workout for every filled XP bubble.",
-                        order = 2,
+                        width = "full",
+                        order = 1,
                         get = function() return WorkoutBuddy.db and WorkoutBuddy.db.profile.event_map.xpbubble or false end,
                         set = function(info, val) WorkoutBuddy.db.profile.event_map.xpbubble = val end,
-                    },
-                    zonechange_newarea = {
+                    }),
+                    zonechange_newarea = EventBox(3, {
                         type = "toggle",
                         name = "New Zone Change",
                         desc = "Trigger a workout when you enter a new zone.",
-                        order = 3,
+                        width = "full",
+                        order = 1,
                         get = function() return WorkoutBuddy.db and WorkoutBuddy.db.profile.event_map.zonechange_newarea or false end,
                         set = function(info, val) WorkoutBuddy.db.profile.event_map.zonechange_newarea = val end,
-                    },
-                    zonechange_zone = {
+                    }),
+                    zonechange_zone = EventBox(4, {
                         type = "toggle",
                         name = "All Zone Change",
                         desc = "Trigger a workout when you enter any new zone.",
-                        order = 4,
+                        width = "full",
+                        order = 1,
                         get = function() return WorkoutBuddy.db and WorkoutBuddy.db.profile.event_map.zonechange_zone or false end,
                         set = function(info, val) WorkoutBuddy.db.profile.event_map.zonechange_zone = val end,
-                    },
-                    zonechange_indoors = {
+                    }),
+                    zonechange_indoors = EventBox(5, {
                         type = "toggle",
                         name = "Indoors Change",
                         desc = "Trigger a workout when you enter buildings.",
-                        order = 5,
+                        width = "full",
+                        order = 1,
                         get = function() return WorkoutBuddy.db and WorkoutBuddy.db.profile.event_map.zonechange_indoors or false end,
                         set = function(info, val) WorkoutBuddy.db.profile.event_map.zonechange_indoors = val end,
-                    },
+                    }),
                     -- custom triggers inserted dynamically
                 },
             },
@@ -120,10 +136,11 @@ function WorkoutBuddy_GeneralTab()
                 inline = true,
                 order = 7,
                 args = {
-                    taxi = {
+                    taxi = EventBox(1, {
                         type = "toggle",
                         name = "On Flight Path",
                         desc = "Show the reminder frame while on a taxi if workouts are queued.",
+                        width = "full",
                         order = 1,
                         get = function()
                             return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.taxi or false
@@ -134,12 +151,13 @@ function WorkoutBuddy_GeneralTab()
                                 WorkoutBuddy.ReminderEvents:Register()
                             end
                         end,
-                    },
-                    rested = {
+                    }),
+                    rested = EventBox(2, {
                         type = "toggle",
                         name = "When Rested",
                         desc = "Show the reminder frame when becoming rested and workouts are queued.",
-                        order = 2,
+                        width = "full",
+                        order = 1,
                         get = function()
                             return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.rested or false
                         end,
@@ -149,12 +167,13 @@ function WorkoutBuddy_GeneralTab()
                                 WorkoutBuddy.ReminderEvents:Register()
                             end
                         end,
-                    },
-                    quest = {
+                    }),
+                    quest = EventBox(3, {
                         type = "toggle",
                         name = "Quest Turn-in",
                         desc = "Show the reminder frame after turning in a quest if workouts are queued.",
-                        order = 3,
+                        width = "full",
+                        order = 1,
                         get = function()
                             return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.quest or false
                         end,
@@ -164,7 +183,7 @@ function WorkoutBuddy_GeneralTab()
                                 WorkoutBuddy.ReminderEvents:Register()
                             end
                         end,
-                    },
+                    }),
                     -- custom open triggers inserted dynamically
                 },
             },

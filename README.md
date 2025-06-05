@@ -96,8 +96,8 @@ Contains several modules:
 ### Custom Events
 
 Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create custom triggers.
-A simple popup lets you name the trigger, pick a game event, and optionally enter Lua code that returns `true` or `false`.
-Press **Save** to add the trigger. Each custom event then shows as a checkbox with pencil and X icons for editing or deletion.
+A popup lets you name the trigger, choose a game event, and optionally enter Lua that returns `true` or `false`.
+Press **Save** to add the trigger. Custom events appear as boxed options with pencil and X icons for editing or deletion.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.
