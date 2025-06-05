@@ -77,18 +77,24 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     frame:AddChild(save)
     save.frame:SetParent(frame.frame)
     save.frame:ClearAllPoints()
-    if frame.closebutton then
-        save.frame:SetPoint("TOPRIGHT", frame.closebutton, "TOPLEFT", -4, 0)
-    else
-        save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -30, -10)
+    local function positionSave()
+        if frame.closebutton then
+            save.frame:SetPoint("TOPRIGHT", frame.closebutton, "TOPLEFT", -4, 0)
+        else
+            save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -30, -10)
+        end
     end
+    positionSave()
+    frame.frame:HookScript("OnShow", positionSave)
 
     -- Internal helpers
     local function buildEventOptions(evt)
         optionsGroup:ReleaseChildren()
-        local info = AceGUI:Create("Label")
+        local link = "https://wowpedia.fandom.com/wiki/" .. evt
+        local info = AceGUI:Create("InteractiveLabel")
         info:SetFullWidth(true)
-        info:SetText("More info: https://wowpedia.fandom.com/wiki/" .. evt)
+        info:SetText("More info: "..link)
+        info:SetCallback("OnClick", function() WorkoutBuddy:CopyToClipboard(link) end)
         optionsGroup:AddChild(info)
 
         if evt == "UNIT_HEALTH" then
@@ -115,6 +121,14 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
             optionsGroup:AddChild(unit)
             optionsGroup:AddChild(op)
             optionsGroup:AddChild(val)
+        elseif evt == "PLAYER_UPDATE_RESTING" then
+            local rest = AceGUI:Create("Dropdown")
+            rest:SetLabel("State")
+            rest:SetList({resting="Resting", active="Not Resting"})
+            rest:SetValue(trigger.options.state or "resting")
+            rest:SetWidth(150)
+            rest:SetCallback("OnValueChanged", function(_,_,v) trigger.options.state = v end)
+            optionsGroup:AddChild(rest)
         end
     end
 
@@ -143,7 +157,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         if tip then
             GameTooltip:AddLine(tip, nil, nil, nil, true)
         end
-        GameTooltip:AddLine("More info: https://wowpedia.fandom.com/wiki/" .. evt, 0.8, 0.8, 0.8, true)
+        GameTooltip:AddLine("Click to copy link", 0.8, 0.8, 0.8, true)
         GameTooltip:Show()
     end
     eventDrop:SetCallback("OnEnter", showEventTip)

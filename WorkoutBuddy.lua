@@ -12,6 +12,27 @@ if _G.WorkoutBuddy_Hydration then
 end
 WorkoutBuddy.DEBUG = false
 
+-- Utility to copy text to the system clipboard or show a dialog
+function WorkoutBuddy:CopyToClipboard(text)
+    if C_Clipboard and C_Clipboard.SetClipboard then
+        C_Clipboard.SetClipboard(text)
+        self:Print("Link copied to clipboard!")
+    else
+        local AceGUI = LibStub("AceGUI-3.0")
+        local frame = AceGUI:Create("Frame")
+        frame:SetTitle("Copy Link")
+        frame:SetWidth(350)
+        frame:SetHeight(80)
+        frame:EnableResize(false)
+        frame:SetLayout("Fill")
+        local box = AceGUI:Create("EditBox")
+        box:SetText(text)
+        box:DisableButton(true)
+        box:HighlightText()
+        frame:AddChild(box)
+    end
+end
+
 function WorkoutBuddy:DbgPrint(...)
     if self.DEBUG then
         print("[WorkoutBuddy]", ...)

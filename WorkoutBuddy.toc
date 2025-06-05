@@ -24,6 +24,7 @@ Libs\LibDBIcon-1.0\embeds.xml
 
 WorkoutBuddy.lua
 Sounds.lua
+wow_events.lua
 trigger_manager.lua
 events.lua
 stats.lua
