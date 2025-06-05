@@ -96,8 +96,8 @@ Contains several modules:
 ### Custom Events
 
 Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create advanced triggers and conditions.
-This opens the **Custom Events** window where you can add one or more triggers, name the event, and define the action. Press *Okay* to save.
-Each custom event appears in the checkbox list with a small pencil icon for editing and an "X" icon for deletion.
+The automation editor now lives in the General tab under **Custom Automation** and lets you add triggers or conditions directly.
+Press *Save* when finished. Each custom event appears in the list with pencil and X icons for editing or removal.
 Conditions can combine triggers using `AND`/`OR` logic and either suggest a workout or open the reminder frame.
 
 - **To extend the default workout library:**  

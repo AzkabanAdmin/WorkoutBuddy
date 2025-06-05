@@ -68,7 +68,7 @@ function WorkoutBuddy_GeneralTab()
                         type = "execute",
                         name = "Add Activity Event",
                         order = 999,
-                        func = function() WorkoutBuddy:OpenAutomationOptions() end,
+                        func = function() WorkoutBuddy:OpenAutomationOptions("conditions") end,
                     },
                 },
             },
@@ -169,10 +169,16 @@ function WorkoutBuddy_GeneralTab()
                         type = "execute",
                         name = "Add Auto-Open Event",
                         order = 999,
-                        func = function() WorkoutBuddy:OpenAutomationOptions() end,
+                        func = function() WorkoutBuddy:OpenAutomationOptions("conditions") end,
                     },
                 },
             },
+            automationHeader = {
+                type = "header",
+                name = "Custom Automation",
+                order = 8,
+            },
+            automation = WorkoutBuddy_AutomationGroup(),
             -- custom events toggles are injected dynamically
         },
     }

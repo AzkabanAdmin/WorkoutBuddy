@@ -4,9 +4,6 @@ local AceDBOptions = LibStub("AceDBOptions-3.0")
 local TriggerManager = WorkoutBuddy and WorkoutBuddy.TriggerManager
 
 function WorkoutBuddy:InitConfig()
-    -- automation options are registered separately and opened from the General
-    -- tab via a button
-    self.automationOptions = WorkoutBuddy_TriggersTab()
 
     self.options = {
         name = "Workout Buddy",
@@ -23,13 +20,13 @@ function WorkoutBuddy:InitConfig()
     }
 
     self:RebuildWorkoutListOptions()
-    -- build automation option lists used in the popup window
-    self:RebuildTriggerOptions(self.automationOptions.args.triggers.args.triggerList.args, {"triggers","triggerList"}, "WorkoutBuddyAutomation")
-    self:RebuildConditionOptions(self.automationOptions.args.conditions.args.conditionList.args, {"conditions","conditionList"}, "WorkoutBuddyAutomation")
+    self:RebuildTriggerOptions(self.options.args.general.args.automation.args.triggers.args.triggerList.args,
+        {"general","automation","triggers","triggerList"})
+    self:RebuildConditionOptions(self.options.args.general.args.automation.args.conditions.args.conditionList.args,
+        {"general","automation","conditions","conditionList"})
     self:RebuildCustomEventToggles()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
-    AceConfig:RegisterOptionsTable("WorkoutBuddyAutomation", self.automationOptions)
     self.optionsFrame = AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Workout Buddy")
     AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Profiles", "Workout Buddy", "profile")
 end
@@ -90,8 +87,8 @@ end
 
 function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path, root)
     local args = targetArgs
-        or (self.options.args.triggers and self.options.args.triggers.args.triggerList.args)
-        or (self.automationOptions and self.automationOptions.args.triggers.args.triggerList.args)
+        or (self.options.args.general and self.options.args.general.args.automation
+            and self.options.args.general.args.automation.args.triggers.args.triggerList.args)
     local selectPath = path or {"triggers"}
     local rootName = root or "WorkoutBuddy"
     wipe(args)
@@ -140,6 +137,7 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path, root)
                     multiline = true,
                     width = "full",
                     order = 4,
+                    hidden = function() return t.event ~= "CUSTOM" end,
                     get = function() return t.custom or "" end,
                     set = function(info, val) t.custom = val end,
                 },
@@ -195,8 +193,8 @@ end
 
 function WorkoutBuddy:RebuildConditionOptions(targetArgs, path, root)
     local args = targetArgs
-        or (self.options.args.triggers and self.options.args.triggers.args.conditionList.args)
-        or (self.automationOptions and self.automationOptions.args.conditions.args.conditionList.args)
+        or (self.options.args.general and self.options.args.general.args.automation
+            and self.options.args.general.args.automation.args.conditions.args.conditionList.args)
     local selectPath = path or {"triggers", "conditionList"}
     local rootName = root or "WorkoutBuddy"
     wipe(args)
@@ -370,6 +368,13 @@ function WorkoutBuddy:OpenConfig(input)
     AceConfigDialog:Open("WorkoutBuddy")
 end
 
-function WorkoutBuddy:OpenAutomationOptions()
-    AceConfigDialog:Open("WorkoutBuddyAutomation")
+function WorkoutBuddy:OpenAutomationOptions(target)
+    AceConfigDialog:Open("WorkoutBuddy")
+    local path = {"general", "automation"}
+    if target == "triggers" or target == "conditions" then
+        table.insert(path, target)
+    else
+        table.insert(path, "conditions")
+    end
+    AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(path))
 end

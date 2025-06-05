@@ -37,7 +37,7 @@ reminder_frame.lua
 
 config\workout_library.lua
 config\general.lua
-config\triggers.lua
+config\automation.lua
 config\workouts.lua
 config\hydration.lua
 config\stats.lua

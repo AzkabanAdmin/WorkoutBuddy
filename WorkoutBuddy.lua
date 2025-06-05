@@ -157,10 +157,10 @@ function WorkoutBuddy:OnProfileChanged()
     end
     self:RebuildWorkoutListOptions()
     if self.RebuildTriggerOptions then
-        self:RebuildTriggerOptions(nil, nil, "WorkoutBuddyAutomation")
+        self:RebuildTriggerOptions(nil, {"general","automation","triggers","triggerList"})
     end
     if self.RebuildConditionOptions then
-        self:RebuildConditionOptions(nil, nil, "WorkoutBuddyAutomation")
+        self:RebuildConditionOptions(nil, {"general","automation","conditions","conditionList"})
     end
     if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.RegisterEvents then
         WorkoutBuddy.TriggerManager:RegisterEvents()
@@ -218,9 +218,12 @@ end
 function WorkoutBuddy:ForceFullConfigRefresh()
     -- Rebuild options from current profile and update config UI
     self:RebuildWorkoutListOptions()
-    if self.automationOptions then
-        self:RebuildTriggerOptions(self.automationOptions.args.triggers.args.triggerList.args, {"triggers","triggerList"}, "WorkoutBuddyAutomation")
-        self:RebuildConditionOptions(self.automationOptions.args.conditions.args.conditionList.args, {"conditions","conditionList"}, "WorkoutBuddyAutomation")
+    if self.options and self.options.args.general and self.options.args.general.args.automation then
+        self:RebuildTriggerOptions(self.options.args.general.args.automation.args.triggers.args.triggerList.args,
+            {"general","automation","triggers","triggerList"})
+        self:RebuildConditionOptions(self.options.args.general.args.automation.args.conditions.args.conditionList.args,
+            {"general","automation","conditions","conditionList"})
+        self:RebuildCustomEventToggles()
     end
     -- If using AceConfigDialog, close and re-open to force UI to update
     if InterfaceOptionsFrame then
