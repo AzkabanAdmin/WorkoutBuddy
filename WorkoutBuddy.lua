@@ -210,6 +210,8 @@ function WorkoutBuddy:ForceFullConfigRefresh()
     -- Rebuild options from current profile and update config UI
     self:RebuildWorkoutListOptions()
     self:RebuildCustomEventToggles()
+    local reg = LibStub("AceConfigRegistry-3.0", true)
+    if reg then reg:NotifyChange("WorkoutBuddy") end
     -- If using AceConfigDialog, close and re-open to force UI to update
     if InterfaceOptionsFrame then
         InterfaceOptionsFrame:Hide()

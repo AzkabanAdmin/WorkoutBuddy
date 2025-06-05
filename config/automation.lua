@@ -42,7 +42,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     eventDrop:SetLabel("Event")
     eventDrop:SetList(self.TriggerManager.EventList)
     eventDrop:SetValue(trigger.event)
-    eventDrop:SetWidth(380)
+    eventDrop:SetWidth(340)
     frame:AddChild(eventDrop)
 
     local customEvent = AceGUI:Create("EditBox")
@@ -61,8 +61,12 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
 
     local save = AceGUI:Create("Button")
     save:SetText("Save")
-    save:SetWidth(120)
+    save:SetWidth(100)
     frame:AddChild(save)
+    -- move the save button next to the close button
+    save.frame:SetParent(frame.frame)
+    save.frame:ClearAllPoints()
+    save.frame:SetPoint("BOTTOMRIGHT", frame.frame, "BOTTOMRIGHT", -140, 17)
 
     -- Internal helpers
     local function updateFields(val)
