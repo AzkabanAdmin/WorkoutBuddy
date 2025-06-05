@@ -84,8 +84,15 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
             save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -30, -10)
         end
     end
-    positionSave()
-    frame.frame:HookScript("OnShow", positionSave)
+    -- On a fresh reload the AceGUI frame may reposition its children after
+    -- this function runs, so defer the final placement until the next frame
+    -- update and whenever the window is shown.
+    local function deferredPosition()
+        C_Timer.After(0, positionSave)
+    end
+
+    deferredPosition()
+    frame.frame:HookScript("OnShow", deferredPosition)
 
     -- Internal helpers
     local function buildEventOptions(evt)
