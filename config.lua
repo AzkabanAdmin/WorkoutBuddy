@@ -116,7 +116,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         target[key] = EventBox(idx, {
             type = "toggle",
             name = c.name or ("Custom " .. id),
-            width = "full",
+            width = 0.8,
             order = 1,
             get = function() return c.enabled ~= false end,
             set = function(info, val) c.enabled = val end,

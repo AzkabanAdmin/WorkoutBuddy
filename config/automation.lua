@@ -88,6 +88,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         trigger.action = action
         self.TriggerManager:RegisterEvents()
         self:RebuildCustomEventToggles()
+        self:ForceFullConfigRefresh()
         frame:Hide()
     end)
 
