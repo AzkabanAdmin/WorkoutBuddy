@@ -18,18 +18,23 @@ function WorkoutBuddy:CopyToClipboard(text)
         C_Clipboard.SetClipboard(text)
         self:Print("Link copied to clipboard!")
     else
-        local AceGUI = LibStub("AceGUI-3.0")
-        local frame = AceGUI:Create("Frame")
-        frame:SetTitle("Copy Link")
-        frame:SetWidth(350)
-        frame:SetHeight(80)
-        frame:EnableResize(false)
-        frame:SetLayout("Fill")
-        local box = AceGUI:Create("EditBox")
-        box:SetText(text)
-        box:DisableButton(true)
-        box:HighlightText()
-        frame:AddChild(box)
+        if not StaticPopupDialogs["WORKOUTBUDDY_COPY"] then
+            StaticPopupDialogs["WORKOUTBUDDY_COPY"] = {
+                text = "Press Ctrl-C to copy:",
+                button1 = CLOSE,
+                hasEditBox = true,
+                editBoxWidth = 350,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                OnShow = function(popup, data)
+                    popup.editBox:SetText(data or "")
+                    popup.editBox:SetFocus()
+                    popup.editBox:HighlightText()
+                end,
+            }
+        end
+        StaticPopup_Show("WORKOUTBUDDY_COPY", nil, nil, text)
     end
 end
 

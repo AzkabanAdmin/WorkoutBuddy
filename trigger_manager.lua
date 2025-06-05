@@ -19,23 +19,17 @@ end
 TriggerManager.EventHelp = {
     PLAYER_LEVEL_UP = "Fires when you gain a level. Example condition: return true",
     PLAYER_XP_UPDATE = "Your XP changed. Example: return UnitXP('player') % UnitXPMax('player') == 0",
-    QUEST_TURNED_IN = "Quest completed. Example: return true",
     UNIT_HEALTH = "Check a unit's health percentage with operators. Uses trigger options.",
     PLAYER_UPDATE_RESTING = "Args: isResting. Guided field lets you choose resting or not.",
-    UNIT_POWER_UPDATE = "Args: unit, powerType. Example: return powerType=='MANA' and UnitPower(unit)<100",
     PLAYER_REGEN_DISABLED = "You entered combat. Example: return true",
     PLAYER_REGEN_ENABLED = "You left combat. Example: return true",
     PLAYER_DEAD = "When you die. Example: return true",
     PLAYER_ALIVE = "When you resurrect. Example: return true",
     BAG_UPDATE = "Your bags changed. Example: return true",
     PLAYER_MONEY = "Money changed. Example: return GetMoney()>0",
-    QUEST_ACCEPTED = "Quest accepted. Args: questId. Example: return questId==12345",
     GOSSIP_SHOW = "NPC gossip opened. Example: return true",
     PLAYER_TARGET_CHANGED = "Target changed. Example: return UnitIsFriend('player','target')",
-    PLAYER_STARTED_MOVING = "Player started moving. Example: return true",
-    PLAYER_STOPPED_MOVING = "Player stopped moving. Example: return true",
     CHAT_MSG_SAY = "Chat message say. Args: msg. Example: return msg:find('hello')",
-    INSTANCE_ENCOUNTER_ENGAGE_UNIT = "Boss fight started. Example: return true",
 }
 
 -- Initialize and register events for all triggers
