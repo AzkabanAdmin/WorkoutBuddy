@@ -184,22 +184,6 @@ function WorkoutBuddy_GeneralTab()
                             end
                         end,
                     }),
-                    open_empty = EventBox(4, {
-                        type = "toggle",
-                        name = "Open When No Activities",
-                        desc = "Also show the reminder frame when the queue is empty.",
-                        width = "full",
-                        order = 1,
-                        get = function()
-                            return WorkoutBuddy.db and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.open_empty or false
-                        end,
-                        set = function(info, val)
-                            WorkoutBuddy.db.profile.reminder_events.open_empty = val
-                            if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
-                                WorkoutBuddy.ReminderEvents:Register()
-                            end
-                        end,
-                    }),
                     -- custom open triggers inserted dynamically
                 },
             },
