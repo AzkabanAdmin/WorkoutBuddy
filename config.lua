@@ -109,19 +109,25 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
                     type = "select",
                     name = "Event",
                     order = 2,
-                    width = 1.7,
+                    width = 2,
                     values = TriggerManager.EventList,
                     get = function() return t.event end,
-                    set = function(info, val) t.event = val; WorkoutBuddy.TriggerManager:RegisterEvents() end,
+                    set = function(info, val)
+                        t.event = val
+                        WorkoutBuddy.TriggerManager:RegisterEvents()
+                    end,
                 },
                 customEvent = {
                     type = "input",
                     name = "Custom Event Name",
                     order = 3,
-                    width = 1.7,
+                    width = 1.8,
                     hidden = function() return t.event ~= "CUSTOM" end,
                     get = function() return t.customEvent or "" end,
-                    set = function(info, val) t.customEvent = val; WorkoutBuddy.TriggerManager:RegisterEvents() end,
+                    set = function(info, val)
+                        t.customEvent = val
+                        WorkoutBuddy.TriggerManager:RegisterEvents()
+                    end,
                 },
                 custom = {
                     type = "input",
@@ -132,10 +138,42 @@ function WorkoutBuddy:RebuildTriggerOptions(targetArgs, path)
                     get = function() return t.custom or "" end,
                     set = function(info, val) t.custom = val end,
                 },
+                up = {
+                    type = "execute",
+                    name = "Up",
+                    order = 5,
+                    disabled = function() return i == 1 end,
+                    func = function()
+                        if i > 1 then
+                            local tmp = triggers[i]
+                            table.remove(triggers, i)
+                            table.insert(triggers, i-1, tmp)
+                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
+                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath)
+                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                        end
+                    end,
+                },
+                down = {
+                    type = "execute",
+                    name = "Down",
+                    order = 6,
+                    disabled = function() return i == #triggers end,
+                    func = function()
+                        if i < #triggers then
+                            local tmp = triggers[i]
+                            table.remove(triggers, i)
+                            table.insert(triggers, i+1, tmp)
+                            WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
+                            WorkoutBuddy:RebuildConditionOptions(nil, selectPath)
+                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                        end
+                    end,
+                },
                 remove = {
                     type = "execute",
                     name = "Remove",
-                    order = 5,
+                    order = 7,
                     func = function()
                         table.remove(triggers, i)
                         WorkoutBuddy:RebuildTriggerOptions(targetArgs, selectPath)
@@ -215,10 +253,40 @@ function WorkoutBuddy:RebuildConditionOptions(targetArgs, path)
                     get = function() return c.custom or "" end,
                     set = function(info, val) c.custom = val end,
                 },
+                up = {
+                    type = "execute",
+                    name = "Up",
+                    order = 7,
+                    disabled = function() return i == 1 end,
+                    func = function()
+                        if i > 1 then
+                            local tmp = conds[i]
+                            table.remove(conds, i)
+                            table.insert(conds, i-1, tmp)
+                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)
+                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                        end
+                    end,
+                },
+                down = {
+                    type = "execute",
+                    name = "Down",
+                    order = 8,
+                    disabled = function() return i == #conds end,
+                    func = function()
+                        if i < #conds then
+                            local tmp = conds[i]
+                            table.remove(conds, i)
+                            table.insert(conds, i+1, tmp)
+                            WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)
+                            AceConfigDialog:SelectGroup("WorkoutBuddy", unpack(selectPath))
+                        end
+                    end,
+                },
                 remove = {
                     type = "execute",
                     name = "Remove",
-                    order = 7,
+                    order = 9,
                     func = function()
                         table.remove(conds, i)
                         WorkoutBuddy:RebuildConditionOptions(targetArgs, selectPath)

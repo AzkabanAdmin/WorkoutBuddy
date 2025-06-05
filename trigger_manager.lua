@@ -5,6 +5,8 @@ local TriggerManager = {}
 -- List of common events that users can easily select from. This is not
 -- exhaustive like WeakAuras but covers the major gameplay events used by the
 -- addon. Users can also supply their own custom event names.
+-- Common events with readable labels. Users may also enter a custom event name
+-- when "Custom Event" is selected.
 TriggerManager.EventList = {
     PLAYER_LEVEL_UP = "PLAYER_LEVEL_UP",
     PLAYER_XP_UPDATE = "PLAYER_XP_UPDATE",
@@ -21,8 +23,16 @@ TriggerManager.EventList = {
     PLAYER_DEAD = "PLAYER_DEAD",
     PLAYER_ALIVE = "PLAYER_ALIVE",
     BAG_UPDATE = "BAG_UPDATE",
+    BAG_UPDATE_DELAYED = "BAG_UPDATE_DELAYED",
     PLAYER_MONEY = "PLAYER_MONEY",
+    QUEST_ACCEPTED = "QUEST_ACCEPTED",
+    QUEST_TURNED_IN = "QUEST_TURNED_IN",
+    GOSSIP_SHOW = "GOSSIP_SHOW",
+    UNIT_HEALTH = "UNIT_HEALTH",
+    UNIT_POWER_UPDATE = "UNIT_POWER_UPDATE",
+    UNIT_AURA = "UNIT_AURA",
     UNIT_SPELLCAST_SUCCEEDED = "UNIT_SPELLCAST_SUCCEEDED",
+    COMBAT_LOG_EVENT_UNFILTERED = "COMBAT_LOG_EVENT_UNFILTERED",
     CUSTOM = "Custom Event",
 }
 

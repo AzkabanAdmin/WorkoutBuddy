@@ -101,6 +101,8 @@ triggers alongside the built-in event checkboxes. Each trigger listens for a gam
 and can run optional Lua code. Conditions combine multiple triggers using `AND`/`OR`
 logic and can either suggest a workout or open the reminder frame. Use this system for
 advanced workflows without editing code.
+You can reorder triggers and conditions with **Up** and **Down** buttons, and the event
+dropdown now offers a larger selection including quest, combat and bag events.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.
