@@ -8,6 +8,16 @@ reminder frame).
 
 local TriggerManager = {}
 
+-- Helper to see if any workouts are queued
+local function QueueHasItems()
+    local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
+    return q and #q > 0
+end
+local function QueueIsEmpty()
+    local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
+    return not q or #q == 0
+end
+
 -- Build the event list from the wow_events.lua file
 TriggerManager.EventList = { CUSTOM = "Custom Event" }
 if WorkoutBuddy_WowEvents then
@@ -99,7 +109,9 @@ function TriggerManager:HandleEvent(event, ...)
             end
             if pass then
                 if t.action == "open_frame" then
-                    if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then
+                    local openEmpty = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.open_empty
+                    local hasItems = QueueHasItems()
+                    if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed and (hasItems or (openEmpty and QueueIsEmpty())) then
                         WorkoutBuddy.ReminderCore:ShowIfAllowed()
                     end
                 else
