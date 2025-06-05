@@ -89,30 +89,6 @@ function WorkoutBuddy_GeneralTab()
                 order = 3.5,
                 func = function() WorkoutBuddy:OpenTriggerEditor("workout") end,
             },
-            frameHeader = {
-                type = "header",
-                name = "Reminder Frame",
-                order = 4,
-            },
-            frameOptions = {
-                type = "group",
-                name = "Workout Reminder Frame Options",
-                inline = true,
-                order = 5,
-                args = {
-                    centerNow = {
-                        type = "execute",
-                        name = "Center Frame Now",
-                        width = "full",
-                        order = 2,
-                        func = function()
-                            if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.CenterFrame then
-                                WorkoutBuddy.ReminderCore:CenterFrame(true)
-                            end
-                        end,
-                    },
-                },
-            },
             openEventsHeader = {
                 type = "header",
                 name = "Auto-Open Events",

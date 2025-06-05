@@ -41,6 +41,7 @@ config\general.lua
 config\automation.lua
 config\workouts.lua
 config\hydration.lua
+config\display.lua
 config\stats.lua
 config\importexport.lua
 config\profile.lua
