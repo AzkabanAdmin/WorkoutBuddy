@@ -106,7 +106,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
             type = "toggle",
             name = c.name or ("Custom " .. id),
             order = idx,
-            width = 1.2,
+            width = 1.0,
             get = function() return c.enabled ~= false end,
             set = function(info, val) c.enabled = val end,
         }
@@ -116,18 +116,18 @@ function WorkoutBuddy:RebuildCustomEventToggles()
             image = "Interface\\Buttons\\UI-GuildButton-PublicNote-Up",
             imageWidth = 16,
             imageHeight = 16,
-            width = 0.2,
-            order = idx + 0.1,
+            width = 0.1,
+            order = idx + 0.01,
             func = function() WorkoutBuddy:OpenTriggerEditor(nil, id) end,
         }
         target[key .. "Del"] = {
             type = "execute",
             name = "",
-            image = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up",
+            image = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",
             imageWidth = 16,
             imageHeight = 16,
-            width = 0.2,
-            order = idx + 0.2,
+            width = 0.1,
+            order = idx + 0.02,
             confirm = true,
             confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",
             func = function()

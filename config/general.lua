@@ -64,13 +64,14 @@ function WorkoutBuddy_GeneralTab()
                         set = function(info, val) WorkoutBuddy.db.profile.event_map.zonechange_indoors = val end,
                     },
                     -- custom triggers inserted dynamically
-                    addCustom = {
-                        type = "execute",
-                        name = "Add Activity Event",
-                        order = 999,
-                        func = function() WorkoutBuddy:OpenTriggerEditor("workout") end,
-                    },
                 },
+            },
+            addCustom = {
+                type = "execute",
+                name = "Add Activity Event",
+                width = "full",
+                order = 3.5,
+                func = function() WorkoutBuddy:OpenTriggerEditor("workout") end,
             },
             frameHeader = {
                 type = "header",
@@ -165,13 +166,14 @@ function WorkoutBuddy_GeneralTab()
                         end,
                     },
                     -- custom open triggers inserted dynamically
-                    addCustomOpen = {
-                        type = "execute",
-                        name = "Add Auto-Open Event",
-                        order = 999,
-                        func = function() WorkoutBuddy:OpenTriggerEditor("open_frame") end,
-                    },
                 },
+            },
+            addCustomOpen = {
+                type = "execute",
+                name = "Add Auto-Open Event",
+                width = "full",
+                order = 7.5,
+                func = function() WorkoutBuddy:OpenTriggerEditor("open_frame") end,
             },
             -- custom events toggles are injected dynamically
         },

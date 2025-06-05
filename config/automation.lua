@@ -22,7 +22,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     local frame = AceGUI:Create("Frame")
     frame:SetTitle("Custom Event")
     frame:SetWidth(400)
-    frame:SetHeight(260)
+    frame:SetHeight(240)
     frame:EnableResize(false)
     frame:SetLayout("Flow")
     frame:SetCallback("OnClose", function(widget)
@@ -42,7 +42,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     eventDrop:SetLabel("Event")
     eventDrop:SetList(self.TriggerManager.EventList)
     eventDrop:SetValue(trigger.event)
-    eventDrop:SetFullWidth(true)
+    eventDrop:SetWidth(350)
     frame:AddChild(eventDrop)
 
     local customEvent = AceGUI:Create("EditBox")
@@ -56,6 +56,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     luaBox:SetNumLines(4)
     luaBox:SetFullWidth(true)
     luaBox:SetText(trigger.custom or "")
+    luaBox:DisableButton(true)
     frame:AddChild(luaBox)
 
     local save = AceGUI:Create("Button")
@@ -63,14 +64,13 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     save:SetWidth(120)
     frame:AddChild(save)
 
-    local close = AceGUI:Create("Button")
-    close:SetText("Close")
-    close:SetWidth(120)
-    frame:AddChild(close)
-
     -- Internal helpers
     local function updateFields(val)
-        customEvent:SetDisabled(val ~= "CUSTOM")
+        if val == "CUSTOM" then
+            customEvent.frame:Show()
+        else
+            customEvent.frame:Hide()
+        end
     end
     updateFields(trigger.event)
 
@@ -91,5 +91,5 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         frame:Hide()
     end)
 
-    close:SetCallback("OnClick", function() frame:Hide() end)
+    -- Frame has its own close button
 end
