@@ -89,6 +89,7 @@ local defaults = {
             taxi = true,
             rested = true,
             quest = true,
+            open_empty = false,
         },
         -- Stored queue of pending workouts
         reminder_queue = {},

@@ -7,11 +7,16 @@ local function QueueHasItems()
     local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
     return q and #q > 0
 end
+local function QueueIsEmpty()
+    local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
+    return not q or #q == 0
+end
 
 -- Build a mapping of events -> condition functions based on user settings
 local function BuildEventMap()
     local opts = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.reminder_events or {}
     local map = {}
+    ReminderEvents.openWhenEmpty = opts.open_empty
 
     -- Always show queued workouts when logging in
     map["PLAYER_ENTERING_WORLD"] = true
@@ -56,7 +61,8 @@ function ReminderEvents:Register()
         if type(condition) == "function" then
             if event == "TAXIMAP_CLOSED" or event == "PLAYER_CONTROL_LOST" then
                 C_Timer.After(0.1, function()
-                    if condition() and QueueHasItems() then
+                    local hasItems = QueueHasItems()
+                    if condition() and (hasItems or (ReminderEvents.openWhenEmpty and QueueIsEmpty())) then
                         WorkoutBuddy:DbgPrint(event .. " triggers Reminder Frame.")
                         if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then
                             WorkoutBuddy.ReminderCore:ShowIfAllowed()
@@ -71,7 +77,8 @@ function ReminderEvents:Register()
             shouldTrigger = condition
         end
 
-        if shouldTrigger and QueueHasItems() then
+        local hasItems = QueueHasItems()
+        if shouldTrigger and (hasItems or (ReminderEvents.openWhenEmpty and QueueIsEmpty())) then
             WorkoutBuddy:DbgPrint(event .. " triggers Reminder Frame.")
             if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then
                 WorkoutBuddy.ReminderCore:ShowIfAllowed()
