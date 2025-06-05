@@ -78,6 +78,9 @@ end
 
 function WorkoutBuddy:OnInitialize()
     self:InitDB()
+    -- ensure new tables exist for older saved variables
+    self.db.profile.triggers = self.db.profile.triggers or {}
+    self.db.profile.conditions = self.db.profile.conditions or {}
     if WorkoutBuddy.Sounds and WorkoutBuddy.Sounds.Init then
         WorkoutBuddy.Sounds:Init()
     end
@@ -140,6 +143,9 @@ function WorkoutBuddy:OnProfileChanged()
         self.db.profile.hydration = hydOpts
     end
     local hydFirst = not hydOpts.initialized
+    -- Ensure automation tables exist for old profiles
+    self.db.profile.triggers = self.db.profile.triggers or {}
+    self.db.profile.conditions = self.db.profile.conditions or {}
     -- Only set defaults if the list is missing or empty
     if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
         self.db.profile.workouts = {

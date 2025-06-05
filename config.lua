@@ -332,15 +332,21 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         }
         target[key .. "Edit"] = {
             type = "execute",
-            name = "Edit",
-            width = 0.6,
+            name = "",
+            image = "Interface\\Buttons\\UI-GuildButton-PublicNote-Up",
+            imageWidth = 16,
+            imageHeight = 16,
+            width = 0.2,
             order = idx + 0.1,
             func = function() WorkoutBuddy:OpenAutomationOptions() end,
         }
         target[key .. "Del"] = {
             type = "execute",
-            name = "Delete",
-            width = 0.7,
+            name = "",
+            image = "Interface\\Buttons\\UI-GroupFinder-Decline",
+            imageWidth = 16,
+            imageHeight = 16,
+            width = 0.2,
             order = idx + 0.2,
             confirm = true,
             confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",

@@ -9,7 +9,10 @@ function WorkoutBuddy_TriggersTab()
             info = { type="description", order=0, name="Define custom triggers and conditions. Triggers listen for game events and conditions combine them to perform actions." },
             triggerHeader = { type="header", name="Triggers", order=1 },
             triggerList = { type="group", name="Triggers", inline=false, order=2, args={} },
-            addTrigger = { type="execute", name="Add Trigger", order=3, func=function()
+            addTrigger = { type="execute", name="Add Trigger", order=100, func=function()
+                if not WorkoutBuddy.db.profile.triggers then
+                    WorkoutBuddy.db.profile.triggers = {}
+                end
                 local t = WorkoutBuddy.db.profile.triggers
                 t[#t+1] = { name="New Trigger", event="PLAYER_LEVEL_UP", customEvent="" }
                 WorkoutBuddy:RebuildTriggerOptions(nil, {"triggers"})
@@ -17,11 +20,14 @@ function WorkoutBuddy_TriggersTab()
                 AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers")
                 WorkoutBuddy.TriggerManager:RegisterEvents()
             end },
-            conditionHeader = { type="header", name="Conditions", order=4 },
-            conditionList = { type="group", name="Conditions", inline=false, order=5, args={} },
-            addCondition = { type="execute", name="Add Condition", order=6, func=function()
+            conditionHeader = { type="header", name="Custom Events", order=3 },
+            conditionList = { type="group", name="Custom Events", inline=false, order=4, args={} },
+            addCondition = { type="execute", name="Add Custom Event", order=200, func=function()
+                if not WorkoutBuddy.db.profile.conditions then
+                    WorkoutBuddy.db.profile.conditions = {}
+                end
                 local c = WorkoutBuddy.db.profile.conditions
-                c[#c+1] = { name="New Condition", logic="AND", triggers={}, activity="", action="workout" }
+                c[#c+1] = { name="New Event", logic="AND", triggers={}, activity="", action="workout" }
                 WorkoutBuddy:RebuildConditionOptions(nil, {"triggers", "conditionList"})
                 AceConfigDialog:SelectGroup("WorkoutBuddy", "triggers", "conditionList")
             end },

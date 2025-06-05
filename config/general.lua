@@ -66,8 +66,8 @@ function WorkoutBuddy_GeneralTab()
                     -- custom triggers inserted dynamically
                     addCustom = {
                         type = "execute",
-                        name = "Add Custom Event",
-                        order = 50,
+                        name = "Add Activity Event",
+                        order = 999,
                         func = function() WorkoutBuddy:OpenAutomationOptions() end,
                     },
                 },
@@ -167,8 +167,8 @@ function WorkoutBuddy_GeneralTab()
                     -- custom open triggers inserted dynamically
                     addCustomOpen = {
                         type = "execute",
-                        name = "Add Custom Event",
-                        order = 50,
+                        name = "Add Auto-Open Event",
+                        order = 999,
                         func = function() WorkoutBuddy:OpenAutomationOptions() end,
                     },
                 },

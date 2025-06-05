@@ -95,11 +95,10 @@ Contains several modules:
 
 ### Custom Events
 
-Use the **Add Custom Event** buttons in the General tab to create advanced triggers and conditions.
-This opens a separate window where you can edit triggers (events) and combine them
-into conditions using `AND`/`OR` logic. Conditions may either suggest a workout or
-open the reminder frame. Each custom event appears as a checkbox next to the built-in
-options so you can enable, edit, or delete it at any time.
+Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create advanced triggers and conditions.
+This opens a window where you can add one or more triggers, name the custom event, and define the action.
+Each custom event appears in the checkbox list with a small pencil icon for editing and an "X" icon for deletion.
+Conditions can combine triggers using `AND`/`OR` logic and either suggest a workout or open the reminder frame.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.
