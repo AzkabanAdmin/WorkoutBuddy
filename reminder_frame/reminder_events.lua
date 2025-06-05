@@ -47,6 +47,9 @@ function ReminderEvents:Register()
     end
 
     self.frame:SetScript("OnEvent", function(_, event, ...)
+        if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.HandleEvent then
+            WorkoutBuddy.TriggerManager:HandleEvent(event, ...)
+        end
         local condition = self.events[event]
         local shouldTrigger = false
 

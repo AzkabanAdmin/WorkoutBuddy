@@ -90,8 +90,15 @@ Contains several modules:
 
 ## Adding Events or Workouts
 
-- **To add new triggers:**  
+- **To add new triggers:**
   Modify `events.lua` or `reminder_events.lua`.
+
+### Automation
+
+The *Automation* tab lets you create custom triggers and conditions, similar to WeakAuras.
+Each trigger listens for a game event and can run optional Lua code. Conditions combine
+multiple triggers using `AND`/`OR` logic and can either suggest a workout or open the
+reminder frame. Use this system for advanced workflows without editing code.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.

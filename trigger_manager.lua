@@ -2,12 +2,28 @@ local WorkoutBuddy = WorkoutBuddy
 
 local TriggerManager = {}
 
+-- List of common events that users can easily select from. This is not
+-- exhaustive like WeakAuras but covers the major gameplay events used by the
+-- addon. Users can also supply their own custom event names.
 TriggerManager.EventList = {
     PLAYER_LEVEL_UP = "PLAYER_LEVEL_UP",
     PLAYER_XP_UPDATE = "PLAYER_XP_UPDATE",
     ZONE_CHANGED_NEW_AREA = "ZONE_CHANGED_NEW_AREA",
     ZONE_CHANGED = "ZONE_CHANGED",
     ZONE_CHANGED_INDOORS = "ZONE_CHANGED_INDOORS",
+    PLAYER_ENTERING_WORLD = "PLAYER_ENTERING_WORLD",
+    PLAYER_UPDATE_RESTING = "PLAYER_UPDATE_RESTING",
+    QUEST_FINISHED = "QUEST_FINISHED",
+    TAXIMAP_CLOSED = "TAXIMAP_CLOSED",
+    PLAYER_CONTROL_LOST = "PLAYER_CONTROL_LOST",
+    PLAYER_REGEN_DISABLED = "PLAYER_REGEN_DISABLED",
+    PLAYER_REGEN_ENABLED = "PLAYER_REGEN_ENABLED",
+    PLAYER_DEAD = "PLAYER_DEAD",
+    PLAYER_ALIVE = "PLAYER_ALIVE",
+    BAG_UPDATE = "BAG_UPDATE",
+    PLAYER_MONEY = "PLAYER_MONEY",
+    UNIT_SPELLCAST_SUCCEEDED = "UNIT_SPELLCAST_SUCCEEDED",
+    CUSTOM = "Custom Event",
 }
 
 function TriggerManager:Init()
@@ -24,8 +40,12 @@ function TriggerManager:RegisterEvents()
 
     local triggers = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.triggers or {}
     for _, t in ipairs(triggers) do
-        if t.event and TriggerManager.EventList[t.event] then
-            self.frame:RegisterEvent(t.event)
+        local evt = t.event
+        if evt == "CUSTOM" then
+            evt = t.customEvent
+        end
+        if evt and evt ~= "" then
+            self.frame:RegisterEvent(evt)
         end
     end
 
@@ -38,7 +58,8 @@ function TriggerManager:HandleEvent(event, ...)
     local triggered = false
     local triggers = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.triggers or {}
     for id, t in ipairs(triggers) do
-        if t.event == event then
+        local evt = t.event == "CUSTOM" and t.customEvent or t.event
+        if evt == event then
             local state = true
             if t.custom and t.custom ~= "" then
                 local f, err = loadstring(t.custom)
@@ -104,8 +125,15 @@ function TriggerManager:EvaluateConditions()
     local conds = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.conditions or {}
     for _, cond in ipairs(conds) do
         if self:CheckCondition(cond) then
-            local src = cond.activity or cond.name or "Trigger"
-            WorkoutBuddy:SuggestWorkout(src)
+            local action = cond.action or "workout"
+            if action == "open_frame" then
+                if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed then
+                    WorkoutBuddy.ReminderCore:ShowIfAllowed()
+                end
+            else
+                local src = cond.activity or cond.name or "Trigger"
+                WorkoutBuddy:SuggestWorkout(src)
+            end
         end
     end
 end

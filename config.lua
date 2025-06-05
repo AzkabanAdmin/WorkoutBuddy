@@ -104,23 +104,33 @@ function WorkoutBuddy:RebuildTriggerOptions()
                     type = "select",
                     name = "Event",
                     order = 2,
+                    width = 1.7,
                     values = TriggerManager.EventList,
                     get = function() return t.event end,
                     set = function(info, val) t.event = val; WorkoutBuddy.TriggerManager:RegisterEvents() end,
+                },
+                customEvent = {
+                    type = "input",
+                    name = "Custom Event Name",
+                    order = 3,
+                    width = 1.7,
+                    hidden = function() return t.event ~= "CUSTOM" end,
+                    get = function() return t.customEvent or "" end,
+                    set = function(info, val) t.customEvent = val; WorkoutBuddy.TriggerManager:RegisterEvents() end,
                 },
                 custom = {
                     type = "input",
                     name = "Custom Lua (return true/false)",
                     multiline = true,
                     width = "full",
-                    order = 3,
+                    order = 4,
                     get = function() return t.custom or "" end,
                     set = function(info, val) t.custom = val end,
                 },
                 remove = {
                     type = "execute",
                     name = "Remove",
-                    order = 4,
+                    order = 5,
                     func = function()
                         table.remove(triggers, i)
                         WorkoutBuddy:RebuildTriggerOptions()
@@ -182,19 +192,27 @@ function WorkoutBuddy:RebuildConditionOptions()
                     get = function() return c.activity or "" end,
                     set = function(info, val) c.activity = val end,
                 },
+                action = {
+                    type = "select",
+                    name = "Action",
+                    order = 5,
+                    values = { workout = "Suggest Workout", open_frame = "Open Reminder Frame" },
+                    get = function() return c.action or "workout" end,
+                    set = function(info, val) c.action = val end,
+                },
                 custom = {
                     type = "input",
                     name = "Custom Lua (return true/false)",
                     multiline = true,
                     width = "full",
-                    order = 5,
+                    order = 6,
                     get = function() return c.custom or "" end,
                     set = function(info, val) c.custom = val end,
                 },
                 remove = {
                     type = "execute",
                     name = "Remove",
-                    order = 6,
+                    order = 7,
                     func = function()
                         table.remove(conds, i)
                         WorkoutBuddy:RebuildConditionOptions()
