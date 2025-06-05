@@ -30,6 +30,9 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         self.triggerEditor = nil
     end)
     self.triggerEditor = frame
+    -- Hide the default status bar to avoid an empty gray strip at the bottom
+    if frame.statustext then frame.statustext:Hide() end
+    if frame.statusbg then frame.statusbg:Hide() end
 
     local nameBox = AceGUI:Create("EditBox")
     nameBox:SetLabel("Name")
