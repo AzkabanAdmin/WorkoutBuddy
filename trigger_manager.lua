@@ -67,7 +67,7 @@ TriggerManager.EventHelp = {
     PLAYER_LEVEL_UP = "Fires when you gain a level. Example condition: return true",
     PLAYER_XP_UPDATE = "Your XP changed. Example: return UnitXP('player') % UnitXPMax('player') == 0",
     QUEST_TURNED_IN = "Quest completed. Example: return true",
-    UNIT_HEALTH = "Args: unit. Example: return UnitHealth(arg1)/UnitHealthMax(arg1) < 0.5",
+    UNIT_HEALTH = "Check a unit's health percentage with operators. Uses trigger options.",
     UNIT_POWER_UPDATE = "Args: unit, powerType. Example: return powerType=='MANA' and UnitPower(unit)<100",
     PLAYER_REGEN_DISABLED = "You entered combat. Example: return true",
     PLAYER_REGEN_ENABLED = "You left combat. Example: return true",
@@ -116,6 +116,20 @@ function TriggerManager:HandleEvent(event, ...)
         local evt = t.event == "CUSTOM" and t.customEvent or t.event
         if t.enabled ~= false and evt == event then
             local pass = true
+            if t.options and t.event == "UNIT_HEALTH" then
+                local unit = t.options.unit or "player"
+                local max = UnitHealthMax(unit)
+                local cur = UnitHealth(unit)
+                local pct = (max > 0) and (cur / max * 100) or 0
+                local val = tonumber(t.options.value or 0) or 0
+                local op = t.options.op or "<"
+                if op == "<" then pass = pct < val
+                elseif op == "<=" then pass = pct <= val
+                elseif op == ">" then pass = pct > val
+                elseif op == ">=" then pass = pct >= val
+                elseif op == "==" then pass = pct == val
+                elseif op == "~=" then pass = pct ~= val end
+            end
             if t.custom and t.custom ~= "" then
                 local f, err = loadstring(t.custom)
                 if not f then

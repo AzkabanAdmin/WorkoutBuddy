@@ -11,7 +11,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         trigger = triggers[index]
         action = trigger.action
     else
-        trigger = { name = "", event = "PLAYER_LEVEL_UP", customEvent = "", custom = "", action = action or "workout", enabled = true }
+        trigger = { name = "", event = "PLAYER_LEVEL_UP", customEvent = "", custom = "", action = action or "workout", enabled = true, options = {} }
     end
 
     if self.triggerEditor then
@@ -49,8 +49,13 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     eventDrop:SetLabel("Event")
     eventDrop:SetList(self.TriggerManager.EventList)
     eventDrop:SetValue(trigger.event)
-    eventDrop:SetWidth(360)
+    eventDrop:SetWidth(380)
     frame:AddChild(eventDrop)
+
+    local optionsGroup = AceGUI:Create("SimpleGroup")
+    optionsGroup:SetFullWidth(true)
+    optionsGroup:SetLayout("Flow")
+    frame:AddChild(optionsGroup)
 
     local customEvent = AceGUI:Create("EditBox")
     customEvent:SetLabel("Custom Event Name")
@@ -68,21 +73,60 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
 
     local save = AceGUI:Create("Button")
     save:SetText("Save")
-    save:SetWidth(100)
-
-    local btnGroup = AceGUI:Create("SimpleGroup")
-    btnGroup:SetFullWidth(true)
-    btnGroup:SetLayout("Flow")
-    btnGroup:AddChild(save)
-    frame:AddChild(btnGroup)
+    save:SetWidth(80)
+    frame:AddChild(save)
+    save.frame:SetParent(frame.frame)
+    save.frame:ClearAllPoints()
+    if frame.closebutton then
+        save.frame:SetPoint("TOPRIGHT", frame.closebutton, "TOPLEFT", -4, 0)
+    else
+        save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -30, -10)
+    end
 
     -- Internal helpers
+    local function buildEventOptions(evt)
+        optionsGroup:ReleaseChildren()
+        local info = AceGUI:Create("Label")
+        info:SetFullWidth(true)
+        info:SetText("More info: https://wowpedia.fandom.com/wiki/" .. evt)
+        optionsGroup:AddChild(info)
+
+        if evt == "UNIT_HEALTH" then
+            local unit = AceGUI:Create("Dropdown")
+            unit:SetLabel("Unit")
+            unit:SetList({player="Player", target="Target", focus="Focus", pet="Pet"})
+            unit:SetValue(trigger.options.unit or "player")
+            unit:SetWidth(120)
+            unit:SetCallback("OnValueChanged", function(_,_,v) trigger.options.unit = v end)
+
+            local op = AceGUI:Create("Dropdown")
+            op:SetLabel("Operator")
+            op:SetList({["<"]="<", ["<="]="<=", [">"]=">", [">="]=">=", ["=="]="==", ["~="]="~="})
+            op:SetValue(trigger.options.op or "<")
+            op:SetWidth(80)
+            op:SetCallback("OnValueChanged", function(_,_,v) trigger.options.op = v end)
+
+            local val = AceGUI:Create("EditBox")
+            val:SetLabel("Value (%)")
+            val:SetWidth(80)
+            val:SetText(trigger.options.value or "50")
+            val:SetCallback("OnTextChanged", function(_,_,v) trigger.options.value = v end)
+
+            optionsGroup:AddChild(unit)
+            optionsGroup:AddChild(op)
+            optionsGroup:AddChild(val)
+        end
+    end
+
     local function updateFields(val)
         if val == "CUSTOM" then
             customEvent.frame:Show()
+            luaBox.frame:Show()
         else
             customEvent.frame:Hide()
+            luaBox.frame:Hide()
         end
+        buildEventOptions(val)
     end
     updateFields(trigger.event)
 
@@ -94,12 +138,13 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     local function showEventTip()
         local evt = eventDrop:GetValue()
         local tip = WorkoutBuddy.TriggerManager.EventHelp[evt]
+        GameTooltip:SetOwner(eventDrop.dropdown, "ANCHOR_RIGHT")
+        GameTooltip:SetText(evt, 1, 1, 1)
         if tip then
-            GameTooltip:SetOwner(eventDrop.dropdown, "ANCHOR_RIGHT")
-            GameTooltip:SetText(evt, 1, 1, 1)
             GameTooltip:AddLine(tip, nil, nil, nil, true)
-            GameTooltip:Show()
         end
+        GameTooltip:AddLine("More info: https://wowpedia.fandom.com/wiki/" .. evt, 0.8, 0.8, 0.8, true)
+        GameTooltip:Show()
     end
     eventDrop:SetCallback("OnEnter", showEventTip)
     eventDrop:SetCallback("OnLeave", GameTooltip_Hide)
