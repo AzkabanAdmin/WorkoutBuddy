@@ -47,6 +47,10 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     nameBox:SetCallback("OnTextChanged", function(_, _, val) trigger.name = val end)
     frame:AddChild(nameBox)
 
+    -- Forward declaration for updateFields so callbacks defined below can call
+    -- it before the actual function body is assigned
+    local updateFields
+
     -- Category dropdown controls which events are shown
     local catDrop = AceGUI:Create("Dropdown")
     catDrop:SetLabel("Category")
@@ -59,19 +63,16 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     local function setCategory(cat)
         self.TriggerManager:FillEventDropdown(eventDrop, cat)
     end
-    catDrop:SetCallback("OnValueChanged", function(_,_,val)
+    local function onCategoryChanged(_, _, val)
         setCategory(val)
         local list = self.TriggerManager.EventCategories[val]
         local first = list and list[1]
         eventDrop:SetValue(first)
         trigger.event = first
         updateFields(first)
-    end)
+    end
 
     local startCat = trigger.event:match("^([A-Z]+)_") or "Other"
-    catDrop:SetValue(startCat)
-    setCategory(startCat)
-    eventDrop:SetValue(trigger.event)
     eventDrop:SetWidth(380)
     frame:AddChild(eventDrop)
 
@@ -143,11 +144,16 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         end
     end
 
-    local function updateFields(val)
+    updateFields = function(val)
         buildEventOptions(val)
         frame:DoLayout()
     end
+
+    catDrop:SetValue(startCat)
+    setCategory(startCat)
+    eventDrop:SetValue(trigger.event)
     updateFields(trigger.event)
+    catDrop:SetCallback("OnValueChanged", onCategoryChanged)
 
     eventDrop:SetCallback("OnValueChanged", function(_, _, val)
         trigger.event = val
