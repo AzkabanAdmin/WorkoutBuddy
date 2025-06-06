@@ -18,35 +18,43 @@ local function QueueIsEmpty()
     return not q or #q == 0
 end
 
--- `EventList` is a simple map of event name -> label used for the dropdown
--- `EventItems` is an ordered array describing how to build the dropdown with
--- headers to group events by prefix
 TriggerManager.EventList = {}
-TriggerManager.EventItems = {}
+TriggerManager.EventCategories = {}
+TriggerManager.CategoryOrder = {}
 if WorkoutBuddy_WowEvents then
     local events = {}
     for _, evt in ipairs(WorkoutBuddy_WowEvents) do
         table.insert(events, evt)
     end
     table.sort(events)
-    local lastCat
     for _, evt in ipairs(events) do
         local cat = evt:match("^([A-Z]+)_") or "Other"
-        if cat ~= lastCat then
-            -- Insert a header when the category changes
-            table.insert(TriggerManager.EventItems, {value = "_H_" .. cat, text = cat, itemType = "Dropdown-Item-Header"})
-            lastCat = cat
+        if not TriggerManager.EventCategories[cat] then
+            TriggerManager.EventCategories[cat] = {}
+            table.insert(TriggerManager.CategoryOrder, cat)
         end
-        table.insert(TriggerManager.EventItems, {value = evt, text = evt})
+        table.insert(TriggerManager.EventCategories[cat], evt)
         TriggerManager.EventList[evt] = evt
+    end
+    for _, list in pairs(TriggerManager.EventCategories) do
+        table.sort(list)
     end
 end
 
--- Helper to build a dropdown with grouped events
-function TriggerManager:FillEventDropdown(dropdown)
+-- Fill a dropdown with all categories
+function TriggerManager:FillCategoryDropdown(dropdown)
     dropdown:SetList(nil)
-    for _, item in ipairs(self.EventItems) do
-        dropdown:AddItem(item.value, item.text, item.itemType)
+    for _, cat in ipairs(self.CategoryOrder) do
+        dropdown:AddItem(cat, cat)
+    end
+end
+
+-- Fill a dropdown with events in the given category
+function TriggerManager:FillEventDropdown(dropdown, category)
+    dropdown:SetList(nil)
+    local list = self.EventCategories[category] or {}
+    for _, evt in ipairs(list) do
+        dropdown:AddItem(evt, evt)
     end
 end
 

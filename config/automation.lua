@@ -47,9 +47,30 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     nameBox:SetCallback("OnTextChanged", function(_, _, val) trigger.name = val end)
     frame:AddChild(nameBox)
 
+    -- Category dropdown controls which events are shown
+    local catDrop = AceGUI:Create("Dropdown")
+    catDrop:SetLabel("Category")
+    self.TriggerManager:FillCategoryDropdown(catDrop)
+    catDrop:SetWidth(380)
+    frame:AddChild(catDrop)
+
     local eventDrop = AceGUI:Create("Dropdown")
     eventDrop:SetLabel("Event")
-    self.TriggerManager:FillEventDropdown(eventDrop)
+    local function setCategory(cat)
+        self.TriggerManager:FillEventDropdown(eventDrop, cat)
+    end
+    catDrop:SetCallback("OnValueChanged", function(_,_,val)
+        setCategory(val)
+        local list = self.TriggerManager.EventCategories[val]
+        local first = list and list[1]
+        eventDrop:SetValue(first)
+        trigger.event = first
+        updateFields(first)
+    end)
+
+    local startCat = trigger.event:match("^([A-Z]+)_") or "Other"
+    catDrop:SetValue(startCat)
+    setCategory(startCat)
     eventDrop:SetValue(trigger.event)
     eventDrop:SetWidth(380)
     frame:AddChild(eventDrop)
