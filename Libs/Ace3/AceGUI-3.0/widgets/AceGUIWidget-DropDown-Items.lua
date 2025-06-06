@@ -274,19 +274,25 @@ do
 		end
 	end
 
-	local function Constructor()
-		local self = ItemBase.Create(widgetType)
+       -- exported
+       local function SetValue(self, value)
+               -- headers do not toggle; implemented for API compatibility
+       end
 
-		self.SetDisabled = SetDisabled
+       local function Constructor()
+               local self = ItemBase.Create(widgetType)
 
-		self.frame:SetScript("OnEnter", OnEnter)
-		self.frame:SetScript("OnLeave", OnLeave)
+               self.SetDisabled = SetDisabled
+               self.SetValue = SetValue
 
-		self.text:SetTextColor(1, 1, 0)
+               self.frame:SetScript("OnEnter", OnEnter)
+               self.frame:SetScript("OnLeave", OnLeave)
 
-		AceGUI:RegisterAsWidget(self)
-		return self
-	end
+               self.text:SetTextColor(1, 1, 0)
+
+               AceGUI:RegisterAsWidget(self)
+               return self
+       end
 
 	AceGUI:RegisterWidgetType(widgetType, Constructor, widgetVersion + ItemBase.version)
 end
