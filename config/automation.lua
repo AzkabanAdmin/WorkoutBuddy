@@ -11,7 +11,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         trigger = triggers[index]
         action = trigger.action
     else
-        trigger = { name = "", event = "PLAYER_LEVEL_UP", customEvent = "", custom = "", action = action or "workout", enabled = true, options = {} }
+        trigger = { name = "", event = "PLAYER_LEVEL_UP", action = action or "workout", enabled = true, options = {} }
     end
 
     if self.triggerEditor then
@@ -20,13 +20,16 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     end
 
     local frame = AceGUI:Create("Frame")
-    frame:SetTitle("Custom Event")
+    frame:SetTitle("Event Trigger")
     frame:SetWidth(420)
     frame:SetHeight(300)
     frame:EnableResize(false)
     frame:SetLayout("List")
     frame:SetCallback("OnClose", function(widget)
         AceGUI:Release(widget)
+        if save then
+            AceGUI:Release(save)
+        end
         self.triggerEditor = nil
     end)
     self.triggerEditor = frame
@@ -44,10 +47,32 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     nameBox:SetCallback("OnTextChanged", function(_, _, val) trigger.name = val end)
     frame:AddChild(nameBox)
 
+    -- Forward declaration for updateFields so callbacks defined below can call
+    -- it before the actual function body is assigned
+    local updateFields
+
+    -- Category dropdown controls which events are shown
+    local catDrop = AceGUI:Create("Dropdown")
+    catDrop:SetLabel("Category")
+    self.TriggerManager:FillCategoryDropdown(catDrop)
+    catDrop:SetWidth(380)
+    frame:AddChild(catDrop)
+
     local eventDrop = AceGUI:Create("Dropdown")
     eventDrop:SetLabel("Event")
-    eventDrop:SetList(self.TriggerManager.EventList)
-    eventDrop:SetValue(trigger.event)
+    local function setCategory(cat)
+        self.TriggerManager:FillEventDropdown(eventDrop, cat)
+    end
+    local function onCategoryChanged(_, _, val)
+        setCategory(val)
+        local list = self.TriggerManager.EventCategories[val]
+        local first = list and list[1]
+        eventDrop:SetValue(first)
+        trigger.event = first
+        updateFields(first)
+    end
+
+    local startCat = trigger.event:match("^([A-Z]+)_") or "Other"
     eventDrop:SetWidth(380)
     frame:AddChild(eventDrop)
 
@@ -56,19 +81,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     optionsGroup:SetLayout("Flow")
     frame:AddChild(optionsGroup)
 
-    local customEvent = AceGUI:Create("EditBox")
-    customEvent:SetLabel("Custom Event Name")
-    customEvent:SetFullWidth(true)
-    customEvent:SetText(trigger.customEvent or "")
-    frame:AddChild(customEvent)
 
-    local luaBox = AceGUI:Create("MultiLineEditBox")
-    luaBox:SetLabel("Lua Condition (return true/false)")
-    luaBox:SetNumLines(5)
-    luaBox:SetFullWidth(true)
-    luaBox:SetText(trigger.custom or "")
-    luaBox:DisableButton(true)
-    frame:AddChild(luaBox)
 
     local save = AceGUI:Create("Button")
     save:SetText("Save")
@@ -78,6 +91,13 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     save.frame:ClearAllPoints()
     -- Anchor Save beside the window's close button
     save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -50, -6)
+    -- Remove from layout so reflows don't reposition it
+    for i, child in ipairs(frame.children) do
+        if child == save then
+            table.remove(frame.children, i)
+            break
+        end
+    end
 
     -- Internal helpers
     local function buildEventOptions(evt)
@@ -124,17 +144,16 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         end
     end
 
-    local function updateFields(val)
-        if val == "CUSTOM" then
-            customEvent.frame:Show()
-            luaBox.frame:Show()
-        else
-            customEvent.frame:Hide()
-            luaBox.frame:Hide()
-        end
+    updateFields = function(val)
         buildEventOptions(val)
+        frame:DoLayout()
     end
+
+    catDrop:SetValue(startCat)
+    setCategory(startCat)
+    eventDrop:SetValue(trigger.event)
     updateFields(trigger.event)
+    catDrop:SetCallback("OnValueChanged", onCategoryChanged)
 
     eventDrop:SetCallback("OnValueChanged", function(_, _, val)
         trigger.event = val
@@ -154,8 +173,6 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     end
     eventDrop:SetCallback("OnEnter", showEventTip)
     eventDrop:SetCallback("OnLeave", GameTooltip_Hide)
-    customEvent:SetCallback("OnTextChanged", function(_, _, val) trigger.customEvent = val end)
-    luaBox:SetCallback("OnTextChanged", function(_, _, val) trigger.custom = val end)
 
     save:SetCallback("OnClick", function()
         if isNew then

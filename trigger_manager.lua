@@ -18,11 +18,43 @@ local function QueueIsEmpty()
     return not q or #q == 0
 end
 
--- Build the event list from the wow_events.lua file
-TriggerManager.EventList = { CUSTOM = "Custom Event" }
+TriggerManager.EventList = {}
+TriggerManager.EventCategories = {}
+TriggerManager.CategoryOrder = {}
 if WorkoutBuddy_WowEvents then
+    local events = {}
     for _, evt in ipairs(WorkoutBuddy_WowEvents) do
+        table.insert(events, evt)
+    end
+    table.sort(events)
+    for _, evt in ipairs(events) do
+        local cat = evt:match("^([A-Z]+)_") or "Other"
+        if not TriggerManager.EventCategories[cat] then
+            TriggerManager.EventCategories[cat] = {}
+            table.insert(TriggerManager.CategoryOrder, cat)
+        end
+        table.insert(TriggerManager.EventCategories[cat], evt)
         TriggerManager.EventList[evt] = evt
+    end
+    for _, list in pairs(TriggerManager.EventCategories) do
+        table.sort(list)
+    end
+end
+
+-- Fill a dropdown with all categories
+function TriggerManager:FillCategoryDropdown(dropdown)
+    dropdown:SetList(nil)
+    for _, cat in ipairs(self.CategoryOrder) do
+        dropdown:AddItem(cat, cat)
+    end
+end
+
+-- Fill a dropdown with events in the given category
+function TriggerManager:FillEventDropdown(dropdown, category)
+    dropdown:SetList(nil)
+    local list = self.EventCategories[category] or {}
+    for _, evt in ipairs(list) do
+        dropdown:AddItem(evt, evt)
     end
 end
 

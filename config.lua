@@ -142,7 +142,7 @@ function WorkoutBuddy:RebuildCustomEventToggles()
             width = 0.1,
             order = 1.2,
             confirm = true,
-            confirmText = "Delete custom event '" .. (c.name or "Custom" .. id) .. "'?",
+            confirmText = "Delete trigger '" .. (c.name or "Custom" .. id) .. "'?",
             func = function()
                 table.remove(triggers, id)
                 WorkoutBuddy.TriggerManager:RegisterEvents()
