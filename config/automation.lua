@@ -63,6 +63,8 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     customEvent:SetLabel("Custom Event Name")
     customEvent:SetFullWidth(true)
     customEvent:SetText(trigger.customEvent or "")
+    -- Start hidden until the event dropdown is "Custom Event"
+    customEvent.frame:Hide()
     frame:AddChild(customEvent)
 
     local luaBox = AceGUI:Create("MultiLineEditBox")
@@ -71,6 +73,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     luaBox:SetFullWidth(true)
     luaBox:SetText(trigger.custom or "")
     luaBox:DisableButton(true)
+    luaBox.frame:Hide()
     frame:AddChild(luaBox)
 
     local save = AceGUI:Create("Button")
