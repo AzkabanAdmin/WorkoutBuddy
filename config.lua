@@ -22,6 +22,7 @@ function WorkoutBuddy:InitConfig()
         type = "group",
         args = {
             general      = WorkoutBuddy_GeneralTab(),
+            display      = WorkoutBuddy_DisplayTab(),
             workouts     = WorkoutBuddy_WorkoutsTab(),
             hydration    = WorkoutBuddy_HydrationTab(),
             stats        = WorkoutBuddy_StatsTab(),
