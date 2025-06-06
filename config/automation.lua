@@ -27,6 +27,9 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     frame:SetLayout("List")
     frame:SetCallback("OnClose", function(widget)
         AceGUI:Release(widget)
+        if save then
+            AceGUI:Release(save)
+        end
         self.triggerEditor = nil
     end)
     self.triggerEditor = frame
@@ -78,6 +81,13 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     save.frame:ClearAllPoints()
     -- Anchor Save beside the window's close button
     save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -50, -6)
+    -- Remove from layout so reflows don't reposition it
+    for i, child in ipairs(frame.children) do
+        if child == save then
+            table.remove(frame.children, i)
+            break
+        end
+    end
 
     -- Internal helpers
     local function buildEventOptions(evt)
@@ -133,6 +143,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
             luaBox.frame:Hide()
         end
         buildEventOptions(val)
+        frame:DoLayout()
     end
     updateFields(trigger.event)
 
