@@ -21,8 +21,17 @@ end
 -- Build the event list from the wow_events.lua file
 TriggerManager.EventList = {}
 if WorkoutBuddy_WowEvents then
+    local events = {}
     for _, evt in ipairs(WorkoutBuddy_WowEvents) do
-        TriggerManager.EventList[evt] = evt
+        table.insert(events, evt)
+    end
+    table.sort(events)
+    for _, evt in ipairs(events) do
+        local cat = evt:match("^([A-Z]+)_") or "Other"
+        if not TriggerManager.EventList[cat] then
+            TriggerManager.EventList[cat] = {}
+        end
+        TriggerManager.EventList[cat][evt] = evt
     end
 end
 

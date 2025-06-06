@@ -92,6 +92,8 @@ Contains several modules:
 
 - **To add new triggers:**
   Modify `events.lua` or `reminder_events.lua`.
+  The trigger editor groups available events by their prefix (e.g. `PLAYER_*`,
+  `CHAT_*`) to make browsing the long list easier.
 
 
 - **To extend the default workout library:**  
