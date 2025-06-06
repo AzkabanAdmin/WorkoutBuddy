@@ -19,7 +19,7 @@ local function QueueIsEmpty()
 end
 
 -- Build the event list from the wow_events.lua file
-TriggerManager.EventList = { CUSTOM = "Custom Event" }
+TriggerManager.EventList = {}
 if WorkoutBuddy_WowEvents then
     for _, evt in ipairs(WorkoutBuddy_WowEvents) do
         TriggerManager.EventList[evt] = evt

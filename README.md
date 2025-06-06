@@ -93,14 +93,6 @@ Contains several modules:
 - **To add new triggers:**
   Modify `events.lua` or `reminder_events.lua`.
 
-### Custom Events
-
-Use the **Add Activity Event** or **Add Auto-Open Event** buttons at the bottom of the General tab to create custom triggers.
-The editor lists every World of Warcraft event. Selecting one shows a short help message and a link to [Wowpedia](https://wowpedia.fandom.com/wiki/Events).
-Some events such as `UNIT_HEALTH` provide guided fields—for example choose a unit, comparison operator, and percentage—while simple events like `GOSSIP_SHOW` just fire when triggered.
-Click the info link to copy the Wowpedia URL to your clipboard for easy reference.
-Lua conditions are hidden unless you choose **Custom Event**, which also reveals a box to enter your own event name.
-Press **Save** in the top-right corner to store the trigger, then close the window. Custom events appear with pencil and X icons for editing or deletion.
 
 - **To extend the default workout library:**  
   Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.

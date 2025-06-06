@@ -11,7 +11,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         trigger = triggers[index]
         action = trigger.action
     else
-        trigger = { name = "", event = "PLAYER_LEVEL_UP", customEvent = "", custom = "", action = action or "workout", enabled = true, options = {} }
+        trigger = { name = "", event = "PLAYER_LEVEL_UP", action = action or "workout", enabled = true, options = {} }
     end
 
     if self.triggerEditor then
@@ -20,7 +20,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     end
 
     local frame = AceGUI:Create("Frame")
-    frame:SetTitle("Custom Event")
+    frame:SetTitle("Event Trigger")
     frame:SetWidth(420)
     frame:SetHeight(300)
     frame:EnableResize(false)
@@ -59,22 +59,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     optionsGroup:SetLayout("Flow")
     frame:AddChild(optionsGroup)
 
-    local customEvent = AceGUI:Create("EditBox")
-    customEvent:SetLabel("Custom Event Name")
-    customEvent:SetFullWidth(true)
-    customEvent:SetText(trigger.customEvent or "")
-    -- Start hidden until the event dropdown is "Custom Event"
-    customEvent.frame:Hide()
-    frame:AddChild(customEvent)
 
-    local luaBox = AceGUI:Create("MultiLineEditBox")
-    luaBox:SetLabel("Lua Condition (return true/false)")
-    luaBox:SetNumLines(5)
-    luaBox:SetFullWidth(true)
-    luaBox:SetText(trigger.custom or "")
-    luaBox:DisableButton(true)
-    luaBox.frame:Hide()
-    frame:AddChild(luaBox)
 
     local save = AceGUI:Create("Button")
     save:SetText("Save")
@@ -138,13 +123,6 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     end
 
     local function updateFields(val)
-        if val == "CUSTOM" then
-            customEvent.frame:Show()
-            luaBox.frame:Show()
-        else
-            customEvent.frame:Hide()
-            luaBox.frame:Hide()
-        end
         buildEventOptions(val)
         frame:DoLayout()
     end
@@ -168,8 +146,6 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     end
     eventDrop:SetCallback("OnEnter", showEventTip)
     eventDrop:SetCallback("OnLeave", GameTooltip_Hide)
-    customEvent:SetCallback("OnTextChanged", function(_, _, val) trigger.customEvent = val end)
-    luaBox:SetCallback("OnTextChanged", function(_, _, val) trigger.custom = val end)
 
     save:SetCallback("OnClick", function()
         if isNew then
