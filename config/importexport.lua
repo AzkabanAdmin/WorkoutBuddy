@@ -6,7 +6,7 @@ function WorkoutBuddy_ImportExportTab()
     return {
         type = "group",
         name = "Import/Export",
-        order = 3,
+        order = 6,
         args = {
             importExportHeader = {
                 type = "header",

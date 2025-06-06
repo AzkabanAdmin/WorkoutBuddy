@@ -5,7 +5,7 @@ function WorkoutBuddy_StatsTab()
     return {
         type = "group",
         name = "Stats",
-        order = 4,
+        order = 5,
         args = {
             timeframe = {
                 type = "select",

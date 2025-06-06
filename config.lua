@@ -22,9 +22,9 @@ function WorkoutBuddy:InitConfig()
         type = "group",
         args = {
             general      = WorkoutBuddy_GeneralTab(),
+            display      = WorkoutBuddy_DisplayTab(),
             workouts     = WorkoutBuddy_WorkoutsTab(),
             hydration    = WorkoutBuddy_HydrationTab(),
-            display      = WorkoutBuddy_DisplayTab(),
             stats        = WorkoutBuddy_StatsTab(),
             importexport = WorkoutBuddy_ImportExportTab(),
             profile      = WorkoutBuddy_ProfileTab and WorkoutBuddy_ProfileTab() or AceDBOptions:GetOptionsTable(WorkoutBuddy.db),

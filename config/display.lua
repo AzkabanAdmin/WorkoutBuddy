@@ -5,7 +5,7 @@ function WorkoutBuddy_DisplayTab()
     return {
         type = "group",
         name = "Display",
-        order = 6,
+        order = 2,
         args = {
             reminderHeader = {
                 type = "header",
@@ -47,6 +47,7 @@ function WorkoutBuddy_DisplayTab()
                         name = "Scale",
                         min = 0.5, max = 2, step = 0.05,
                         order = 1,
+                        width = "full",
                         get = function() return WorkoutBuddy.db.profile.hydration.scale or 1 end,
                         set = function(info, val)
                             WorkoutBuddy.db.profile.hydration.scale = val
@@ -60,6 +61,7 @@ function WorkoutBuddy_DisplayTab()
                         name = "Opacity",
                         min = 0.2, max = 1, step = 0.05,
                         order = 2,
+                        width = "full",
                         get = function() return WorkoutBuddy.db.profile.hydration.alpha or 0.9 end,
                         set = function(info, val)
                             WorkoutBuddy.db.profile.hydration.alpha = val
@@ -72,6 +74,7 @@ function WorkoutBuddy_DisplayTab()
                         type = "execute",
                         name = "Center Frame",
                         order = 3,
+                        width = "full",
                         func = function() WorkoutBuddy.Hydration:CenterFrame(true) end,
                     },
                 },

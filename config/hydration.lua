@@ -13,7 +13,7 @@ function WorkoutBuddy_HydrationTab()
     return {
         type = "group",
         name = "Hydration",
-        order = 5,
+        order = 4,
         args = {
             enable = {
                 type = "toggle",

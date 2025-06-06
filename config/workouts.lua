@@ -18,7 +18,7 @@ function WorkoutBuddy_WorkoutsTab()
     return {
         type = "group",
         name = "Workouts",
-        order = 2,
+        order = 3,
         args = {
             workoutListHeader = {
                 type = "header",
