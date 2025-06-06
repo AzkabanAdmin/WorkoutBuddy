@@ -49,7 +49,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
 
     local eventDrop = AceGUI:Create("Dropdown")
     eventDrop:SetLabel("Event")
-    eventDrop:SetList(self.TriggerManager.EventList)
+    self.TriggerManager:FillEventDropdown(eventDrop)
     eventDrop:SetValue(trigger.event)
     eventDrop:SetWidth(380)
     frame:AddChild(eventDrop)

@@ -18,20 +18,35 @@ local function QueueIsEmpty()
     return not q or #q == 0
 end
 
--- Build the event list from the wow_events.lua file
+-- `EventList` is a simple map of event name -> label used for the dropdown
+-- `EventItems` is an ordered array describing how to build the dropdown with
+-- headers to group events by prefix
 TriggerManager.EventList = {}
+TriggerManager.EventItems = {}
 if WorkoutBuddy_WowEvents then
     local events = {}
     for _, evt in ipairs(WorkoutBuddy_WowEvents) do
         table.insert(events, evt)
     end
     table.sort(events)
+    local lastCat
     for _, evt in ipairs(events) do
         local cat = evt:match("^([A-Z]+)_") or "Other"
-        if not TriggerManager.EventList[cat] then
-            TriggerManager.EventList[cat] = {}
+        if cat ~= lastCat then
+            -- Insert a header when the category changes
+            table.insert(TriggerManager.EventItems, {value = "_H_" .. cat, text = cat, itemType = "Dropdown-Item-Header"})
+            lastCat = cat
         end
-        TriggerManager.EventList[cat][evt] = evt
+        table.insert(TriggerManager.EventItems, {value = evt, text = evt})
+        TriggerManager.EventList[evt] = evt
+    end
+end
+
+-- Helper to build a dropdown with grouped events
+function TriggerManager:FillEventDropdown(dropdown)
+    dropdown:SetList(nil)
+    for _, item in ipairs(self.EventItems) do
+        dropdown:AddItem(item.value, item.text, item.itemType)
     end
 end
 
