@@ -40,7 +40,7 @@ Contains several modules:
 - *Tab modules in `config/`:*
     - *general.lua*: Toggle which events trigger workouts.
     - *workouts.lua*: View, add, or remove workouts; quick-add from a predefined library.
-    - *importexport.lua*: Export or import your workout list with serialized strings. Includes `SerializeWorkouts` and `DeserializeWorkouts` helpers.
+    - *importexport.lua*: Export or import your workout list or entire profile using serialized strings. Includes `SerializeWorkouts`, `DeserializeWorkouts`, `SerializeProfile`, and `DeserializeProfile` helpers.
 
 ---
 
