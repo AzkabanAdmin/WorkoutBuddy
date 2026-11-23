@@ -1,5 +1,11 @@
 # Workout Buddy
 
+## 2.2.2
+
+### Fixed
+- The progress line at the bottom of the workout window no longer runs under the "Workout now" button. It now reads like "4 / 5 today, 7-day streak".
+- The workout window is a little taller by default, so four workouts fit without the last one being cut off.
+
 ## 2.2.1
 
 ### New

@@ -745,7 +745,7 @@ WB.Hydration:SetUnit("oz")
 -- Reset size restores the default size
 WB.db.profile.reminder_frame.width, WB.db.profile.reminder_frame.height = 500, 400
 WB.options.args.display.args.resetSize.func()
-check("reset size uses defaults", WB.db.profile.reminder_frame.width == 340 and WB.db.profile.reminder_frame.height == 170)
+check("reset size uses defaults", WB.db.profile.reminder_frame.width == 340 and WB.db.profile.reminder_frame.height == 200)
 
 ----------------------------------------------------------------------------
 -- Demo mode (/wob demo): sample data that never replaces real data
@@ -765,6 +765,8 @@ check("demo today 4 of 5", WB.Stats:GetTodayLine():find("Today: 4 / 5"), WB.Stat
 check("demo week streak", WB.Stats:GetStreak() == 7, WB.Stats:GetStreak())
 check("demo water shown", select(1, WB.Stats:GetTodayWater()) == 32)
 check("demo history summary", WB.Stats:GetSummary("week"):find("By activity"))
+check("footer short line", WB.Stats:GetShortLine() == "4 / 5 today, 7-day streak", WB.Stats:GetShortLine())
+check("footer uses short line", WB.ReminderFrame.progress:GetText() == WB.Stats:GetShortLine(), WB.ReminderFrame.progress:GetText())
 check("demo window and popup", WB.ReminderFrame:IsShown() and WorkoutBuddy_HydrationFrame:IsShown())
 WB.ReminderCore:Complete(1)
 check("demo goal reached message", chatHas("Daily goal reached"))

@@ -171,6 +171,16 @@ function Stats:GetTodayLine()
     return line
 end
 
+--- Compact progress for the workout window's footer, e.g. "4 / 5 today, 7-day streak".
+function Stats:GetShortLine()
+    local goal = profile() and profile().daily_goal or 0
+    local count = self:GetTodayCount()
+    local line = goal > 0 and string.format("%d / %d today", count, goal) or string.format("%d today", count)
+    local streak = self:GetStreak()
+    if streak > 0 then line = line .. string.format(", %d-day streak", streak) end
+    return line
+end
+
 function Stats:GetSummary(timeframe)
     local start, invalid = self:GetStart(timeframe)
     if invalid then

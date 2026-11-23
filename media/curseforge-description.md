@@ -2,7 +2,7 @@
 
 **Turns boss kills, deaths, flights and long play sessions into quick exercise, stretch and water breaks.** Free, lightweight, and it never interrupts you in combat.
 
-![Completing a workout](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/goal.gif)
+![The workout window](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/queue.png)
 
 ## Why
 
@@ -18,13 +18,17 @@ Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a s
 - **Workout library** of desk-friendly exercises, stretches, eye breaks and healthy habits. Edit, add or share your own list.
 - **Custom triggers** on any game event, with health or rest-area conditions.
 
-![The workout window](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/queue.png)
-
 ![Hydration reminder](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/hydration.png)
+
+![Choose when to get a workout](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/settings-general.png)
 
 ![Quiet hours](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/quiet-hours.png)
 
 ![Stats](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/stats.png)
+
+![Your workout list](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/workouts.png)
+
+![Custom triggers](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/trigger-editor.png)
 
 ## Commands
 

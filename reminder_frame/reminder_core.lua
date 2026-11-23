@@ -83,7 +83,7 @@ function ReminderCore:ApplyOptions()
     f:SetAlpha(o.alpha or 0.95)
     f:SetSize(
         math.min(MAX_W, math.max(MIN_W, o.width or 340)),
-        math.min(MAX_H, math.max(MIN_H, o.height or 170)))
+        math.min(MAX_H, math.max(MIN_H, o.height or 200)))
     f:ClearAllPoints()
     if o.x and o.y then
         f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", o.x, o.y)
@@ -213,14 +213,17 @@ function ReminderCore:CreateFrame()
         "|cFF888888Workouts appear here as you play. Click \"Workout now\" for one right away.|r")
 
     -- Footer: progress and a button for an instant workout
-    f.progress = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    f.progress:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 10, 12)
-    f.progress:SetJustifyH("LEFT")
-
     f.suggest = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     f.suggest:SetSize(100, 20)
     f.suggest:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -22, 7)
     f.suggest:SetText("Workout now")
+
+    -- Short progress line that stops before the button instead of running under it
+    f.progress = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.progress:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 10, 12)
+    f.progress:SetPoint("RIGHT", f.suggest, "LEFT", -6, 0)
+    f.progress:SetJustifyH("LEFT")
+    f.progress:SetWordWrap(false)
     f.suggest:SetScript("OnClick", function() WorkoutBuddy:SuggestWorkout("Requested", true) end)
 
     -- Resize grip
@@ -344,7 +347,7 @@ function ReminderCore:UpdateDisplay()
     f.content:SetHeight(math.max(ROW_H, #queue * ROW_H))
     self:LayoutRows()
     f.emptyLabel:SetShown(#queue == 0)
-    f.progress:SetText(WorkoutBuddy.Stats:GetTodayLine())
+    f.progress:SetText(WorkoutBuddy.Stats:GetShortLine())
 
     local range = f.scroll:GetVerticalScrollRange() or 0
     if f.scroll:GetVerticalScroll() > range then f.scroll:SetVerticalScroll(range) end
