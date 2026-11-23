@@ -122,6 +122,7 @@ WorkoutBuddy.WowEvents = {
 
 -- Short descriptions shown in the trigger editor
 WorkoutBuddy.EventHelp = {
+    ITEM_USED                = "Workout Buddy trigger: fires when you use an item or cast a spell, such as a potion, healthstone, food or a spell you name. Some clients hide this from addons during boss fights; it then simply does not count.",
     PLAYER_LEVEL_UP          = "Fires when you gain a level.",
     PLAYER_XP_UPDATE         = "Your XP changed. Does not fire at max level.",
     UNIT_HEALTH              = "Checks a unit's health percent using the fields below. Fires only when the condition becomes true. Health can be hidden from addons in some situations on modern clients; the trigger then waits.",

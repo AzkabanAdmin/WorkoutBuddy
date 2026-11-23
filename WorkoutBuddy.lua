@@ -190,7 +190,11 @@ local defaults = {
             auction_house = false,
             login = true,
             defer_combat = true,
+            recap = true, -- after a boss fight or leaving an instance: recap and open
         },
+        -- Built-in trigger key -> { name, amount, unit } to always add that
+        -- workout instead of a random one (e.g. player_death = 5 Burpees)
+        builtin_workouts = {},
         reminder_queue = {},
         quiet_hours = {
             clock = "local", -- "local" (computer clock) or "realm"
@@ -267,6 +271,18 @@ function WorkoutBuddy:MigrateProfile()
     end
 
     self.QuietHours.Sanitize(p.quiet_hours, defaults.profile.quiet_hours)
+
+    -- Set workouts (built-in events and "add a set workout" triggers)
+    p.builtin_workouts = type(p.builtin_workouts) == "table" and p.builtin_workouts or {}
+    for key, w in pairs(p.builtin_workouts) do
+        p.builtin_workouts[key] = self.CleanSetWorkout(w)
+    end
+    for _, t in ipairs(p.triggers) do
+        if t.action == "fixed" then
+            t.workout = self.CleanSetWorkout(t.workout)
+            if not t.workout then t.action = "workout" end
+        end
+    end
 
     -- Fields v1 saved but never used
     local rf = p.reminder_frame
@@ -398,6 +414,53 @@ function WorkoutBuddy:SuggestWorkout(source, manual)
     end
     if p.notify.sound and p.notify.sound ~= "None" then
         self.Sounds:Play(p.notify.sound)
+    end
+end
+
+--- A valid copy of a set workout ({ name, amount, unit }), or nil.
+function WorkoutBuddy.CleanSetWorkout(w)
+    if type(w) ~= "table" or type(w.name) ~= "string" or not w.name:match("%S") then return nil end
+    return {
+        name = strtrim(w.name),
+        amount = math.max(0, tonumber(w.amount) or 0),
+        unit = type(w.unit) == "string" and strtrim(w.unit) or "",
+    }
+end
+
+--- Add a specific workout every time something happens (a potion, a death...).
+-- Unlike random suggestions there is no cooldown, so every occurrence counts;
+-- repeats merge into one queue row. Chat and sound are skipped in combat,
+-- where the recap after the fight covers them.
+function WorkoutBuddy:AddSetWorkout(workout, source)
+    local p = self.db.profile
+    local w = self.CleanSetWorkout(workout)
+    if not (p.enabled and w) then return end
+    local quiet = self.QuietHours:Mode("workouts")
+    if quiet == "pause" then return end
+
+    self.ReminderQueue:AddToQueue(w)
+    self.playMinutes = 0
+    self.ReminderCore:UpdateDisplay()
+    if not (self.ReminderFrame and self.ReminderFrame:IsShown()) then
+        self:StartMinimapPulse()
+    end
+
+    if quiet or self.InCombat() then return end
+    if p.notify.chat then
+        self:Print(string.format("|cFFAAFFAA%s|r: %s", source or "Workout", self:FormatWorkout(w)))
+    end
+    if p.notify.sound and p.notify.sound ~= "None" then
+        self.Sounds:Play(p.notify.sound)
+    end
+end
+
+--- A built-in trigger fired: its set workout if one is chosen, else a random one.
+function WorkoutBuddy:FireBuiltIn(key, source)
+    local set = self.db.profile.builtin_workouts[key]
+    if set then
+        self:AddSetWorkout(set, source)
+    else
+        self:SuggestWorkout(source)
     end
 end
 

@@ -38,19 +38,19 @@ function WorkoutBuddy:RegisterBuiltInEvents()
 end
 
 function WorkoutBuddy:PLAYER_LEVEL_UP()
-    if EventMap().levelup then self:SuggestWorkout("Level Up") end
+    if EventMap().levelup then self:FireBuiltIn("levelup", "Level Up") end
 end
 
 function WorkoutBuddy:ZONE_CHANGED_NEW_AREA()
-    if EventMap().zonechange_newarea then self:SuggestWorkout("New Zone") end
+    if EventMap().zonechange_newarea then self:FireBuiltIn("zonechange_newarea", "New Zone") end
 end
 
 function WorkoutBuddy:ZONE_CHANGED()
-    if EventMap().zonechange_zone then self:SuggestWorkout("Zone Change") end
+    if EventMap().zonechange_zone then self:FireBuiltIn("zonechange_zone", "Zone Change") end
 end
 
 function WorkoutBuddy:ZONE_CHANGED_INDOORS()
-    if EventMap().zonechange_indoors then self:SuggestWorkout("Indoors/Outdoors") end
+    if EventMap().zonechange_indoors then self:FireBuiltIn("zonechange_indoors", "Indoors/Outdoors") end
 end
 
 -- One "bubble" is 1/20th of a level.
@@ -63,7 +63,7 @@ end
 function WorkoutBuddy:PLAYER_XP_UPDATE()
     local current = self:CurrentXpBubble()
     if EventMap().xpbubble and current > (self.lastXpBubble or 0) then
-        self:SuggestWorkout("XP Bubble")
+        self:FireBuiltIn("xpbubble", "XP Bubble")
     end
     self.lastXpBubble = current
 end
@@ -72,27 +72,27 @@ end
 function WorkoutBuddy:ENCOUNTER_END(_, _, _, _, _, success)
     if self.IsSecret(success) then return end
     if success == 1 and EventMap().boss_kill then
-        self:SuggestWorkout("Boss Defeated")
+        self:FireBuiltIn("boss_kill", "Boss Defeated")
     end
 end
 
 function WorkoutBuddy:CHALLENGE_MODE_COMPLETED()
-    if EventMap().challenge_complete then self:SuggestWorkout("Keystone Complete") end
+    if EventMap().challenge_complete then self:FireBuiltIn("challenge_complete", "Keystone Complete") end
 end
 
 -- ACHIEVEMENT_EARNED: achievementID, alreadyEarned
 function WorkoutBuddy:ACHIEVEMENT_EARNED(_, _, alreadyEarned)
     if not alreadyEarned and EventMap().achievement then
-        self:SuggestWorkout("Achievement")
+        self:FireBuiltIn("achievement", "Achievement")
     end
 end
 
 function WorkoutBuddy:PLAYER_DEAD()
-    if EventMap().player_death then self:SuggestWorkout("You Died") end
+    if EventMap().player_death then self:FireBuiltIn("player_death", "You Died") end
 end
 
 function WorkoutBuddy:QUEST_TURNED_IN()
-    if EventMap().quest_turnin then self:SuggestWorkout("Quest Turned In") end
+    if EventMap().quest_turnin then self:FireBuiltIn("quest_turnin", "Quest Turned In") end
 end
 
 ------------------------------------------------------------------------
@@ -120,6 +120,6 @@ function WorkoutBuddy:OnPlayMinute()
     local target = tonumber(p.play_timer_minutes) or 45
     if self.playMinutes >= target and not self.InCombat() then
         self.lastSuggestAt = nil -- the break timer is never blocked by the cooldown
-        self:SuggestWorkout(string.format("%d min of play", self.playMinutes))
+        self:FireBuiltIn("play_timer", string.format("%d min of play", self.playMinutes))
     end
 end

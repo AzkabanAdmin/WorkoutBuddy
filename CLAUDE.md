@@ -44,7 +44,8 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 
 - **Released:** 2.2.2 (tag pushed 2026-11-22): window footer and height fix, page screenshots. First release meant for the public page.
 - **Previous:** 2.2.1 (`/wob demo`), 2.2.0 (quiet hours; tested in game by Tim), 2.1.0.
-- **Tests:** 148 passing (`npm test` in `tests`).
+- **Unreleased (committed locally, not pushed):** 2.3.0, set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), and the boss fight and instance recap. Requested by a user (ordsneakysneaky, 2026-10-09). Needs an in-game test before release.
+- **Tests:** 182 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
 ## Open work
@@ -53,11 +54,13 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 - **Updating media:** Tim takes shots with `/wob demo` on and drops them in `media/_incoming` (git-ignored). Claude views them, then `python scripts/media.py crop` / `gif` (use `--scale 2` for the small in-game window at 1080p) into `media/` under the names the description uses.
 - **Promotion ideas (Tim's call):** Wago Addons and WoWInterface listings, one post each in r/WowUI and the WoWUIDev Discord, fitness-minded streamers, and a small update around New Year.
 
+- **In-game check of 2.3.0:** potions and healthstones counted through `UNIT_SPELLCAST_SUCCEEDED` on each client, especially whether Midnight hides the spell ID during encounters (the trigger then skips, by design), and the recap after a real boss fight.
 - In-game check of quiet hours on each client, especially the realm clock (`C_DateAndTime.GetCurrentCalendarTime`, falling back to `GetGameTime`) on Classic Era and Forever.
 - Ideas not started: a "snooze for 1 hour" button, and quiet hours that follow instance or combat state instead of the clock.
 
 ## Change log
 
+- 2026-11-22: 2.3.0 built: set workouts per action, item and spell triggers, boss fight and instance recap.
 - 2026-11-22: 2.2.2 with CurseForge screenshots and GIF; footer and window height fix.
 - 2026-11-22: `/wob demo` screenshot mode, `scripts/media.py`, CurseForge description in `media/`.
 - 2026-11-22: Review on a second machine; quiet hours feature; fixes for partial logging, target health triggers, mixed water units, nested profile import checks, imported trigger safety and Reset size. Removed merged `codex/*` branches.

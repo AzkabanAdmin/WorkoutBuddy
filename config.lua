@@ -150,8 +150,12 @@ function WorkoutBuddy:RebuildCustomEventToggles()
         local target = isOpen and openArgs or actArgs
         local kind = isOpen and "open_frame" or "workout"
         counts[kind] = counts[kind] + 1
-        local evt = self.TriggerManager.TriggerEvent(c) or "?"
-        local label = (c.name and c.name ~= "") and c.name or evt
+        local isItem = c.event == self.TriggerManager.ITEM_USED
+        local evt = isItem and c.event or (self.TriggerManager.TriggerEvent(c) or "?")
+        local label = (c.name and c.name ~= "") and c.name or (isItem and "Item used" or evt)
+        if c.action == "fixed" and c.workout then
+            label = label .. " |cFF888888(adds " .. self:FormatWorkout(c.workout) .. ")|r"
+        end
         if c.imported then label = label .. " |cFFFF8800(imported, review to enable)|r" end
 
         target["t" .. id] = {

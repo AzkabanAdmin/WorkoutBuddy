@@ -1,7 +1,11 @@
 -- trigger_manager.lua
 -- Player-defined triggers. Each trigger names an event, optional built-in
--- options (health threshold, rested state), an optional Lua condition and an
--- action: "workout" (suggest a workout) or "open_frame" (show the queue).
+-- options (health threshold, rested state, item used), an optional Lua
+-- condition and an action: "workout" (suggest a random workout), "fixed"
+-- (add a set workout every time) or "open_frame" (show the queue).
+--
+-- ITEM_USED is Workout Buddy's own trigger type: it listens to the player's
+-- successful spellcasts and matches them to items through item_use.lua.
 --
 -- TriggerManager is the only place custom triggers are dispatched from, so a
 -- trigger fires exactly once per event.
@@ -20,6 +24,10 @@ TriggerManager.EventHelp = WorkoutBuddy.EventHelp
 ------------------------------------------------------------------------
 -- Event catalog for the editor (filtered to what this client supports)
 ------------------------------------------------------------------------
+local ITEM_USED = "ITEM_USED"
+local ITEM_USED_EVENT = "UNIT_SPELLCAST_SUCCEEDED"
+TriggerManager.ITEM_USED = ITEM_USED
+
 local function CategoryOf(evt)
     return evt:match("^([A-Z]+)_") or "OTHER"
 end
@@ -40,6 +48,15 @@ function TriggerManager:BuildCatalog()
             table.insert(self.EventCategories[cat], evt)
         end
     end
+    -- Workout Buddy's own "I use an item or spell" trigger
+    if WorkoutBuddy.IsEventValid(ITEM_USED_EVENT) then
+        local cat = CategoryOf(ITEM_USED)
+        if not self.EventCategories[cat] then
+            self.EventCategories[cat] = {}
+            table.insert(self.CategoryOrder, cat)
+        end
+        table.insert(self.EventCategories[cat], ITEM_USED)
+    end
     table.sort(self.CategoryOrder)
     for _, list in pairs(self.EventCategories) do table.sort(list) end
 end
@@ -47,11 +64,19 @@ end
 ------------------------------------------------------------------------
 -- Registration
 ------------------------------------------------------------------------
+-- The game event a trigger listens to.
 local function TriggerEvent(t)
     if t.event == "CUSTOM" then return t.customEvent end
+    if t.event == ITEM_USED then return ITEM_USED_EVENT end
     return t.event
 end
 TriggerManager.TriggerEvent = TriggerEvent
+
+--- True if a trigger can use this event name on this client.
+function TriggerManager.IsTriggerEventValid(evt)
+    if evt == ITEM_USED then return WorkoutBuddy.IsEventValid(ITEM_USED_EVENT) end
+    return WorkoutBuddy.IsEventValid(evt)
+end
 
 local function Triggers()
     local p = WorkoutBuddy.db and WorkoutBuddy.db.profile
@@ -75,9 +100,11 @@ local UNIT_CHANGE_EVENTS = { PLAYER_TARGET_CHANGED = "target", PLAYER_FOCUS_CHAN
 function TriggerManager:RegisterEvents()
     if not self.frame then return end
     self.frame:UnregisterAllEvents()
+    local needItems = false
     for _, t in ipairs(Triggers()) do
         local evt = TriggerEvent(t)
         t._lastPass = nil
+        if t.enabled ~= false and t.event == ITEM_USED then needItems = true end
         if t.enabled ~= false and t.event == "UNIT_HEALTH" then
             for changeEvent, unit in pairs(UNIT_CHANGE_EVENTS) do
                 if t.options.unit == unit then WorkoutBuddy.SafeRegisterEvent(self.frame, changeEvent) end
@@ -91,6 +118,7 @@ function TriggerManager:RegisterEvents()
             end
         end
     end
+    WorkoutBuddy.ItemUse:SetActive(needItems)
 end
 
 ------------------------------------------------------------------------
@@ -161,6 +189,11 @@ function TriggerManager:Evaluate(t, event, ...)
         pass, edge = res, true
     elseif t.event == "PLAYER_UPDATE_RESTING" and t.options.state then
         pass = (IsResting() and true or false) == (t.options.state == "resting")
+    elseif t.event == ITEM_USED then
+        -- UNIT_SPELLCAST_SUCCEEDED: unit, castGUID, spellID
+        local unit, _, spellID = ...
+        if unit ~= "player" or WorkoutBuddy.IsSecret(spellID) then return end
+        if not WorkoutBuddy.ItemUse.Matches(t.options, WorkoutBuddy.ItemUse:Lookup(spellID)) then return end
     end
 
     -- Imported code is never run, and the trigger never fires without its
@@ -189,10 +222,13 @@ function TriggerManager:Evaluate(t, event, ...)
 
     if not pass then return end
 
+    local label = (t.name and t.name ~= "") and t.name or (t.event == ITEM_USED and "Item used" or event)
     if t.action == "open_frame" then
         WorkoutBuddy.ReminderEvents:TryShowFrame()
+    elseif t.action == "fixed" and t.workout then
+        WorkoutBuddy:AddSetWorkout(t.workout, label)
     else
-        WorkoutBuddy:SuggestWorkout((t.name and t.name ~= "") and t.name or event)
+        WorkoutBuddy:SuggestWorkout(label)
     end
 end
 

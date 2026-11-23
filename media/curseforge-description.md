@@ -19,6 +19,7 @@ Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a s
 - **Stats:** daily goal, streaks, active days and totals by day, week, month or all time.
 - **Workout library** of desk-friendly exercises, stretches, eye breaks and healthy habits. Edit, add or share your own list.
 - **Custom triggers** on any game event, with health or rest-area conditions.
+- **Set workouts per action:** 3 push-ups per mana potion, 5 burpees per death. Repeats add up, and a recap after each boss fight and dungeon or raid shows the totals.
 
 ![Hydration reminder](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/hydration.png)
 

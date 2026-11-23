@@ -28,6 +28,7 @@ Sounds.lua
 wow_events.lua
 stats.lua
 trigger_manager.lua
+item_use.lua
 events.lua
 hydration.lua
 quiet_hours.lua

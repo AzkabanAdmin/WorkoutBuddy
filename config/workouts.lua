@@ -29,6 +29,107 @@ local function Refresh()
     WorkoutBuddy:NotifyConfigChanged()
 end
 
+------------------------------------------------------------------------
+-- Set workouts for built-in events
+------------------------------------------------------------------------
+local BUILTINS = {
+    { "player_death", "You died" },
+    { "boss_kill", "Boss defeated" },
+    { "challenge_complete", "Mythic+ keystone completed" },
+    { "play_timer", "Playing for a while" },
+    { "levelup", "Level up" },
+    { "xpbubble", "XP bubble" },
+    { "quest_turnin", "Quest turned in" },
+    { "achievement", "Achievement earned" },
+    { "zonechange_newarea", "Entering a new zone" },
+    { "zonechange_zone", "Any sub-zone change" },
+    { "zonechange_indoors", "Going indoors or outdoors" },
+}
+
+local RANDOM = "__random"
+
+local function SetKey(w) return w.name .. "|" .. (w.unit or "") end
+
+local function SetChoices(key)
+    local values, order = { [RANDOM] = "A random workout from my list" }, { RANDOM }
+    local function add(w)
+        local k = SetKey(w)
+        if not values[k] then
+            values[k] = w.name .. ((w.unit and w.unit ~= "") and (" (" .. w.unit .. ")") or "")
+            order[#order + 1] = k
+        end
+    end
+    for _, w in ipairs(Workouts()) do add(w) end
+    local current = WorkoutBuddy.db.profile.builtin_workouts[key]
+    if current then add(current) end -- keep a choice that was removed from the list
+    return values, order
+end
+
+local function SetWorkoutArgs()
+    local args = {
+        intro = {
+            type = "description",
+            name = "Each event normally adds a random workout from your list. Pick one here to always get that workout "
+                .. "instead, every time it happens. For example: You died = 5 Burpees.\n",
+            order = 0,
+        },
+    }
+    for i, entry in ipairs(BUILTINS) do
+        local key, label = entry[1], entry[2]
+        local function Builtins() return WorkoutBuddy.db.profile.builtin_workouts end
+        local function Off()
+            return not WorkoutBuddy.db.profile.event_map[key]
+        end
+        args[key] = {
+            type = "select",
+            name = label,
+            desc = function()
+                return Off() and "This event is turned off in General. Turn it on there for this to apply." or nil
+            end,
+            order = i * 2,
+            width = 1.6,
+            hidden = function() return not WorkoutBuddy:IsBuiltInTriggerSupported(key) end,
+            values = function() return (SetChoices(key)) end,
+            sorting = function() return select(2, SetChoices(key)) end,
+            get = function()
+                local w = Builtins()[key]
+                return w and SetKey(w) or RANDOM
+            end,
+            set = function(_, val)
+                if val == RANDOM then
+                    Builtins()[key] = nil -- no default to restore: random is the absence of a set workout
+                    return
+                end
+                for _, w in ipairs(Workouts()) do
+                    if SetKey(w) == val then
+                        Builtins()[key] = { name = w.name, amount = tonumber(w.amount) or 1, unit = w.unit or "" }
+                        return
+                    end
+                end
+            end,
+        }
+        args[key .. "_amount"] = {
+            type = "input",
+            name = "Amount",
+            order = i * 2 + 1,
+            width = 0.5,
+            hidden = function()
+                return not WorkoutBuddy:IsBuiltInTriggerSupported(key) or not Builtins()[key]
+            end,
+            validate = function(_, val)
+                local n = tonumber(val)
+                if not n or n < 0 then return "Enter a number of 0 or more." end
+                return true
+            end,
+            get = function() return tostring(Builtins()[key] and Builtins()[key].amount or "") end,
+            set = function(_, val)
+                if Builtins()[key] then Builtins()[key].amount = tonumber(val) or Builtins()[key].amount end
+            end,
+        }
+    end
+    return args
+end
+
 local function CurrentCategory()
     local cats = WorkoutBuddy.GetLibraryCategories()
     if not library.category then library.category = cats[1] end
@@ -109,6 +210,15 @@ function WorkoutBuddy.ConfigTabs.Workouts()
                         WorkoutBuddy:Print(name .. " is already in your list.")
                     end
                 end,
+            },
+
+            setHeader = { type = "header", name = "Set workouts for events", order = 15 },
+            setWorkouts = {
+                type = "group",
+                name = "",
+                inline = true,
+                order = 16,
+                args = SetWorkoutArgs(),
             },
 
             libraryHeader = { type = "header", name = "Workout library", order = 20 },

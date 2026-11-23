@@ -8,8 +8,12 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 local WIKI = "https://warcraft.wiki.gg/wiki/"
 
-local ACTIONS = { workout = "Suggest a workout", open_frame = "Open the workout window" }
-local ACTION_ORDER = { "workout", "open_frame" }
+local ACTIONS = {
+    workout = "Suggest a random workout",
+    fixed = "Add a set workout every time",
+    open_frame = "Open the workout window",
+}
+local ACTION_ORDER = { "workout", "fixed", "open_frame" }
 
 --- Open the trigger editor.
 -- @param action string "workout" or "open_frame" for a new trigger
@@ -54,9 +58,8 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     local actionDrop = AceGUI:Create("Dropdown")
     actionDrop:SetLabel("When it fires")
     actionDrop:SetList(ACTIONS, ACTION_ORDER)
-    actionDrop:SetValue(t.action == "open_frame" and "open_frame" or "workout")
+    actionDrop:SetValue(ACTIONS[t.action] and t.action or "workout")
     actionDrop:SetRelativeWidth(0.6)
-    actionDrop:SetCallback("OnValueChanged", function(_, _, val) t.action = val end)
     frame:AddChild(actionDrop)
 
     local enabledBox = AceGUI:Create("CheckBox")
@@ -136,10 +139,98 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         local info = AceGUI:Create("InteractiveLabel")
         info:SetFullWidth(true)
         local help = WorkoutBuddy.EventHelp[evt]
-        info:SetText((help and ("|cFFFFFFFF" .. help .. "|r\n") or "") ..
-            "|cFF66BBFFClick for the event's wiki link|r")
-        info:SetCallback("OnClick", function() WorkoutBuddy:CopyToClipboard(WIKI .. evt) end)
+        local isItem = (t.event == TM.ITEM_USED)
+        if isItem then
+            info:SetText("|cFFFFFFFF" .. (help or "") .. "|r")
+        else
+            info:SetText((help and ("|cFFFFFFFF" .. help .. "|r\n") or "") ..
+                "|cFF66BBFFClick for the event's wiki link|r")
+            info:SetCallback("OnClick", function() WorkoutBuddy:CopyToClipboard(WIKI .. evt) end)
+        end
         optionsGroup:AddChild(info)
+
+        if isItem then
+            local IU = WorkoutBuddy.ItemUse
+            t.options.preset = t.options.preset or "potion"
+            local preset = AceGUI:Create("Dropdown")
+            preset:SetLabel("Count when I use")
+            preset:SetList(IU.PRESET_LABELS, IU.PRESET_ORDER)
+            preset:SetValue(t.options.preset)
+            preset:SetWidth(200)
+            preset:SetCallback("OnValueChanged", function(_, _, v)
+                t.options.preset = v
+                BuildEventOptions()
+            end)
+            optionsGroup:AddChild(preset)
+            if t.options.preset == "named" then
+                local names = AceGUI:Create("EditBox")
+                names:SetLabel("Item or spell names, separated by commas")
+                names:SetFullWidth(true)
+                names:DisableButton(true)
+                names:SetText(t.options.items or "")
+                names:SetCallback("OnTextChanged", function(_, _, v) t.options.items = v end)
+                optionsGroup:AddChild(names)
+            end
+        end
+
+        if t.action == "fixed" then
+            local first = WorkoutBuddy.db.profile.workouts[1]
+            t.workout = t.workout or { name = first and first.name or "Push-ups",
+                amount = first and first.amount or 3, unit = first and first.unit or "reps" }
+
+            local heading = AceGUI:Create("Heading")
+            heading:SetText("Workout to add each time")
+            heading:SetFullWidth(true)
+            optionsGroup:AddChild(heading)
+
+            local wName = AceGUI:Create("EditBox")
+            local wAmount = AceGUI:Create("EditBox")
+            local wUnit = AceGUI:Create("EditBox")
+
+            local pick = AceGUI:Create("Dropdown")
+            pick:SetLabel("Pick from your list")
+            local list, order = {}, {}
+            for i, w in ipairs(WorkoutBuddy.db.profile.workouts) do
+                list[i] = w.name .. ((w.unit and w.unit ~= "") and (" (" .. w.unit .. ")") or "")
+                order[#order + 1] = i
+            end
+            pick:SetList(list, order)
+            pick:SetFullWidth(true)
+            pick:SetCallback("OnValueChanged", function(_, _, i)
+                local w = WorkoutBuddy.db.profile.workouts[i]
+                if not w then return end
+                t.workout = { name = w.name, amount = t.workout.amount, unit = w.unit or "" }
+                wName:SetText(t.workout.name)
+                wUnit:SetText(t.workout.unit)
+            end)
+            optionsGroup:AddChild(pick)
+
+            wName:SetLabel("Workout")
+            wName:SetWidth(200)
+            wName:DisableButton(true)
+            wName:SetText(t.workout.name or "")
+            wName:SetCallback("OnTextChanged", function(_, _, v) t.workout.name = v end)
+            optionsGroup:AddChild(wName)
+
+            wAmount:SetLabel("Amount")
+            wAmount:SetWidth(80)
+            wAmount:DisableButton(true)
+            wAmount:SetText(tostring(t.workout.amount or ""))
+            wAmount:SetCallback("OnTextChanged", function(_, _, v) t.workout.amount = tonumber(v) end)
+            optionsGroup:AddChild(wAmount)
+
+            wUnit:SetLabel("Unit")
+            wUnit:SetWidth(100)
+            wUnit:DisableButton(true)
+            wUnit:SetText(t.workout.unit or "")
+            wUnit:SetCallback("OnTextChanged", function(_, _, v) t.workout.unit = v end)
+            optionsGroup:AddChild(wUnit)
+
+            local note = AceGUI:Create("Label")
+            note:SetFullWidth(true)
+            note:SetText("|cFF888888Every time counts: ten potions at 3 push-ups add one row of Push-ups x30.|r")
+            optionsGroup:AddChild(note)
+        end
 
         if t.event == "UNIT_HEALTH" then
             local unit = AceGUI:Create("Dropdown")
@@ -205,6 +296,11 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
     end
     BuildEventOptions()
 
+    actionDrop:SetCallback("OnValueChanged", function(_, _, val)
+        t.action = val
+        BuildEventOptions()
+    end)
+
     catDrop:SetCallback("OnValueChanged", function(_, _, cat)
         SetCategory(cat)
         local first = (TM.EventCategories[cat] or {})[1]
@@ -239,7 +335,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
 
     save:SetCallback("OnClick", function()
         local evt = CurrentEvent()
-        if not WorkoutBuddy.IsEventValid(evt) then
+        if not TM.IsTriggerEventValid(evt) then
             frame:SetStatusText("|cFFFF5555'" .. tostring(evt) .. "' is not an event this game client knows.|r")
             return
         end
@@ -251,6 +347,20 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
                     break
                 end
             end
+        end
+        if t.event == TM.ITEM_USED and (t.options.preset or "named") == "named"
+            and #WorkoutBuddy.ItemUse.ParseNames(t.options.items) == 0 then
+            frame:SetStatusText("|cFFFF5555Name at least one item or spell, or pick a preset.|r")
+            return
+        end
+        if t.action == "fixed" then
+            t.workout = WorkoutBuddy.CleanSetWorkout(t.workout)
+            if not t.workout then
+                frame:SetStatusText("|cFFFF5555Enter the workout to add each time.|r")
+                return
+            end
+        else
+            t.workout = nil
         end
         if t.custom and strtrim(t.custom) == "" then t.custom = nil end
         if t.custom then

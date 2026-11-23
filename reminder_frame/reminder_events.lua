@@ -68,14 +68,81 @@ function ReminderEvents:TryShowFrame()
 end
 
 ------------------------------------------------------------------------
+-- Recap: totals of what was added during a boss fight or an instance run,
+-- shown when the fight ends or you leave (e.g. "Push-ups x30, Burpees x10").
+------------------------------------------------------------------------
+local function NewTally() return { order = {}, byKey = {} } end
+
+local function Tally(t, w)
+    local key = (w.name or "?") .. "|" .. (w.unit or "")
+    local e = t.byKey[key]
+    if not e then
+        e = { name = w.name, unit = w.unit or "", amount = 0 }
+        t.byKey[key] = e
+        t.order[#t.order + 1] = e
+    end
+    e.amount = e.amount + (tonumber(w.amount) or 0)
+end
+
+function ReminderEvents:NoteAdded(w)
+    if self.encounterTally then Tally(self.encounterTally, w) end
+    if self.instanceTally then Tally(self.instanceTally, w) end
+end
+
+--- "Push-ups x30 reps, Burpees x10 reps", or nil when nothing was added.
+function ReminderEvents.FormatTally(t)
+    if not t or #t.order == 0 then return nil end
+    local parts = {}
+    for _, e in ipairs(t.order) do parts[#parts + 1] = WorkoutBuddy:FormatWorkout(e) end
+    return table.concat(parts, ", ")
+end
+
+function ReminderEvents:ShowRecap(title, tally)
+    local text = self.FormatTally(tally)
+    if not (text and Opts().recap) then return end
+    if WorkoutBuddy.QuietHours:IsQuiet("workouts") then return end
+    WorkoutBuddy:Print(string.format("|cFFFFD700%s:|r %s", title, text))
+    self:TryShowFrame() -- waits for the end of combat if needed
+end
+
+------------------------------------------------------------------------
 -- Event handlers
 ------------------------------------------------------------------------
 local handlers = {}
+
+local function InInstance()
+    if not IsInInstance then return false end
+    local inside = IsInInstance()
+    return inside and true or false
+end
 
 handlers.PLAYER_ENTERING_WORLD = function(self, isInitialLogin)
     if isInitialLogin and Opts().login then
         C_Timer.After(5, function() self:TryShowFrame() end)
     end
+    local inside = InInstance()
+    if inside and not self.inInstance then
+        self.instanceTally = NewTally()
+    elseif not inside and self.inInstance then
+        local tally = self.instanceTally
+        self.instanceTally = nil
+        self:ShowRecap("Instance recap", tally)
+    end
+    self.inInstance = inside
+end
+
+handlers.ENCOUNTER_START = function(self)
+    self.encounterTally = NewTally()
+end
+
+handlers.ENCOUNTER_END = function(self)
+    -- Wait a moment so the "Boss defeated" workout, added by another
+    -- ENCOUNTER_END handler, is part of the recap whichever runs first.
+    C_Timer.After(1, function()
+        local tally = self.encounterTally
+        self.encounterTally = nil
+        self:ShowRecap("Boss fight recap", tally)
+    end)
 end
 
 handlers.PLAYER_REGEN_ENABLED = function(self)
@@ -182,6 +249,12 @@ function ReminderEvents:Register()
         self.wasAFK = UnitIsAFK("player") and true or false
     end
     if o.auction_house then wanted[#wanted + 1] = "AUCTION_HOUSE_SHOW" end
+    if o.recap then
+        wanted[#wanted + 1] = "ENCOUNTER_START"
+        wanted[#wanted + 1] = "ENCOUNTER_END"
+    else
+        self.encounterTally = nil
+    end
 
     for _, evt in ipairs(wanted) do
         WorkoutBuddy.SafeRegisterEvent(self.frame, evt)

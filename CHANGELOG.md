@@ -1,5 +1,14 @@
 # Workout Buddy
 
+## 2.3.0
+
+### New
+- **Set workouts per action.** Make something in the game always cost a specific workout, every time it happens. For example: each mana potion adds 3 push-ups and each death adds 5 burpees. Repeats add up in one row, so ten potions become Push-ups x30.
+  - Custom triggers have a new action, "Add a set workout every time". These skip the minimum time between suggestions, so every occurrence counts.
+  - Built-in events (You died, Boss defeated, Level up and the rest) can each have a set workout instead of a random one. Find it under Workouts > Set workouts for events.
+- **"I use an item or spell" trigger.** Count potions, healthstones, food and drink, flasks and elixirs, any consumable, or items and spells you name, without writing any code. Find it in the trigger editor under the ITEM category, as ITEM_USED.
+- **Boss fight and instance recap.** When a boss fight ends, and when you leave a dungeon or raid, chat shows what was added (for example "Boss fight recap: Push-ups x30 reps, Burpees x10 reps") and the workout window opens once you are out of combat. Workouts added during combat no longer announce one by one.
+
 ## 2.2.2
 
 ### Fixed

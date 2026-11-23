@@ -17,6 +17,7 @@ tinsert, tremove, tconcat, sort = table.insert, table.remove, table.concat, tabl
 floor, ceil, min, max, abs = math.floor, math.ceil, math.min, math.max, math.abs
 strlenutf8 = function(s) return utf8.len(s) or #s end
 wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
+table.wipe = wipe -- WoW provides both
 date, time = os.date, os.time
 debugstack = function() return "" end
 geterrorhandler = function() return function(e) print("ERRORHANDLER: " .. tostring(e)) ERRORS = (ERRORS or 0) + 1 end end
@@ -809,6 +810,177 @@ for i, r in ipairs(hist) do
     if r.timestamp > early then future = true end
 end
 check("demo history ordered", ordered and not future and #hist == 33 + 28, #hist)
+
+----------------------------------------------------------------------------
+-- Set workouts, item use triggers and the raid recap
+q = WB.ReminderState.getQueue()
+local P = WB.db.profile
+P.enabled = true
+P.quiet_hours.workouts.enabled = false
+P.notify.chat = true
+wipe(P.triggers)
+WB.TriggerManager:Reset()
+WB.ReminderQueue:Clear()
+at(FRI, 15)
+
+local function queued(name)
+    for _, w in ipairs(WB.ReminderState.getQueue()) do if w.name == name then return w.amount end end
+    return 0
+end
+
+-- Built-in event with a set workout: every occurrence counts, no cooldown
+P.event_map.player_death = true
+P.builtin_workouts.player_death = { name = "Burpees", amount = 5, unit = "reps" }
+FireEvent("PLAYER_DEAD")
+FireEvent("PLAYER_DEAD")
+check("set workout per death", queued("Burpees") == 10, queued("Burpees"))
+check("set workout announced out of combat", chatHas("You Died.*Burpees x5"))
+
+-- Choosing it in the Workouts tab
+local setArgs = WB.options.args.workouts.args.setWorkouts.args
+check("set workout option shows choice", setArgs.player_death.get() == "Burpees|reps", setArgs.player_death.get())
+setArgs.player_death.set(nil, "__random")
+check("set workout back to random", P.builtin_workouts.player_death == nil)
+local firstW = P.workouts[1]
+setArgs.levelup.set(nil, firstW.name .. "|" .. firstW.unit)
+setArgs.levelup_amount.set(nil, "7")
+check("set workout chosen from list", P.builtin_workouts.levelup and P.builtin_workouts.levelup.amount == 7
+    and P.builtin_workouts.levelup.name == firstW.name)
+setArgs.levelup.set(nil, "__random")
+P.builtin_workouts.player_death = { name = "Burpees", amount = 5, unit = "reps" }
+
+-- Mock bags: Classic-style consumables (subclass 0) so presets fall back to names
+local BAG = { [1] = 111, [2] = 222, [3] = 333 }
+local ITEMS = {
+    [111] = { name = "Major Mana Potion", spell = "Restore Mana", spellID = 5001, class = 0, sub = 0 },
+    [222] = { name = "Healthstone", spell = "Healthstone", spellID = 5002, class = 0, sub = 0 },
+    [333] = { name = "Roasted Quail", spell = "Food", spellID = 5003, class = 0, sub = 0 },
+}
+local SPELLS = { [5001] = "Restore Mana", [5002] = "Healthstone", [5003] = "Food", [9999] = "Fireball" }
+C_Container = {
+    GetContainerNumSlots = function(bag) return bag == 0 and 4 or 0 end,
+    GetContainerItemID = function(bag, slot) return bag == 0 and BAG[slot] or nil end,
+}
+C_Item = {
+    GetItemSpell = function(id) local i = ITEMS[id] if i then return i.spell, i.spellID end end,
+    GetItemInfoInstant = function(id) local i = ITEMS[id] if i then return id, "Consumable", "Consumable", "", 0, i.class, i.sub end end,
+    GetItemNameByID = function(id) return ITEMS[id] and ITEMS[id].name end,
+}
+C_Spell = { GetSpellName = function(id) return SPELLS[id] end }
+
+check("item use idle without triggers", not WB.ItemUse.active)
+table.insert(P.triggers, { name = "Mana potion", event = "ITEM_USED", action = "fixed", enabled = true,
+    options = { preset = "potion" }, workout = { name = "Push-ups", amount = 3, unit = "reps" } })
+WB.TriggerManager:Reset()
+check("item use active with a trigger", WB.ItemUse.active and WB.ItemUse.bySpell and WB.ItemUse.bySpell[5001] ~= nil)
+WB.ReminderQueue:Clear()
+IN_COMBAT = true
+local chatBeforePots = #CHAT
+for _ = 1, 10 do FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-1", 5001) end
+check("ten potions = 30 push-ups", queued("Push-ups") == 30, queued("Push-ups"))
+check("no chat per potion in combat", #CHAT == chatBeforePots, #CHAT - chatBeforePots)
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "raid3", "Cast-2", 5001)
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-3", 9999)
+check("other units and spells ignored", queued("Push-ups") == 30)
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-4", SECRET)
+check("secret spell ignored safely", queued("Push-ups") == 30 and not ERRORS)
+IN_COMBAT = false
+
+-- Presets and named items/spells
+local IU = WB.ItemUse
+check("preset food by spell name", IU.Matches({ preset = "food" }, IU:Lookup(5003)))
+check("preset healthstone", IU.Matches({ preset = "healthstone" }, IU:Lookup(5002)))
+check("preset potion not food", not IU.Matches({ preset = "potion" }, IU:Lookup(5003)))
+check("preset any consumable", IU.Matches({ preset = "consumable" }, IU:Lookup(5003)))
+check("named item", IU.Matches({ preset = "named", items = "major mana potion" }, IU:Lookup(5001)))
+check("named partial and spell", IU.Matches({ preset = "named", items = "Mana Potion, Fireball" }, IU:Lookup(9999)))
+check("named no match", not IU.Matches({ preset = "named", items = "Healthstone" }, IU:Lookup(5001)))
+check("retail subclass potion", IU.Matches({ preset = "potion" },
+    { name = "algari mana elixir thing", spellName = "refreshing", classID = 0, subclassID = 1 }))
+
+-- Bags change: a new item is recognized after the bag update
+ITEMS[444] = { name = "Superior Healing Potion", spell = "Healing Potion", spellID = 5004, class = 0, sub = 0 }
+SPELLS[5004] = "Healing Potion"
+BAG[4] = 444
+FireEvent("BAG_UPDATE_DELAYED")
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-5", 5004)
+check("new bag item counted", queued("Push-ups") == 33, queued("Push-ups"))
+
+-- Random action on an item trigger still works, and the editor opens on item and set triggers
+local okEd2, eEd2 = pcall(function() WB:OpenTriggerEditor(nil, 1) end)
+check("editor opens on item trigger", okEd2, eEd2)
+local okEd3, eEd3 = pcall(function() WB:OpenTriggerEditor("fixed") end)
+check("editor opens for new set trigger", okEd3, eEd3)
+WB:RebuildCustomEventToggles()
+local row = WB.options.args.general.args.customTriggers.args.t1
+check("trigger list label", row and row.args.toggle.name:find("Mana potion") and row.args.toggle.name:find("adds Push%-ups x3"),
+    row and row.args.toggle.name)
+
+-- Saved data upkeep: a set trigger without a valid workout falls back to random
+table.insert(P.triggers, { name = "Broken set", event = "PLAYER_DEAD", action = "fixed", enabled = true, options = {}, workout = { amount = 3 } })
+WB:MigrateProfile()
+check("broken set workout falls back", P.triggers[2].action == "workout" and P.triggers[2].workout == nil)
+table.remove(P.triggers, 2)
+P.builtin_workouts.bogus = "x"
+WB:MigrateProfile()
+check("bad builtin workout removed", P.builtin_workouts.bogus == nil and P.builtin_workouts.player_death.amount == 5)
+
+-- Boss fight recap: totals for the fight, window waits for combat to end
+WB.ReminderQueue:Clear()
+WB.ReminderFrame:Hide()
+FireEvent("ENCOUNTER_START", 1, "Boss", 14, 20)
+IN_COMBAT = true
+for _ = 1, 4 do FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-6", 5001) end
+FireEvent("PLAYER_DEAD")
+FireEvent("ENCOUNTER_END", 1, "Boss", 14, 20, 0)
+Advance(2)
+check("boss recap printed", chatHas("Boss fight recap.*Push%-ups x12 reps, Burpees x5 reps"))
+check("boss recap waits for combat", not WB.ReminderFrame:IsShown())
+IN_COMBAT = false
+FireEvent("PLAYER_REGEN_ENABLED")
+Advance(3)
+check("boss recap opens after combat", WB.ReminderFrame:IsShown())
+
+-- Instance recap when leaving
+WB.ReminderFrame:Hide()
+IsInInstance = function() return true, "raid" end
+FireEvent("PLAYER_ENTERING_WORLD", false, false)
+FireEvent("PLAYER_DEAD")
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-7", 5001)
+IsInInstance = function() return false, "none" end
+FireEvent("PLAYER_ENTERING_WORLD", false, false)
+check("instance recap printed", chatHas("Instance recap.*Burpees x5 reps, Push%-ups x3 reps"))
+check("instance recap opens", WB.ReminderFrame:IsShown())
+
+-- Recap off: nothing printed
+P.reminder_events.recap = false
+WB.ReminderEvents:Register()
+local chatBeforeOff = #CHAT
+FireEvent("ENCOUNTER_START", 2, "Boss", 14, 20)
+FireEvent("PLAYER_DEAD")
+FireEvent("ENCOUNTER_END", 2, "Boss", 14, 20, 1)
+Advance(2)
+local recapLine = false
+for i = chatBeforeOff + 1, #CHAT do if CHAT[i]:find("recap") then recapLine = true end end
+check("recap off is silent", not recapLine)
+P.reminder_events.recap = true
+WB.ReminderEvents:Register()
+
+-- Quiet hours pause set workouts too
+P.quiet_hours.workouts.enabled = true
+P.quiet_hours.workouts.mode = "pause"
+at(FRI, 23)
+local burpeesBefore = queued("Burpees")
+FireEvent("PLAYER_DEAD")
+check("quiet hours pause set workouts", queued("Burpees") == burpeesBefore)
+P.quiet_hours.workouts.enabled = false
+
+-- Options still callable with the new settings
+local savedProfile2 = WB.options.args.profile; WB.options.args.profile = nil; walk(WB.options); WB.options.args.profile = savedProfile2
+check("options callable with set workouts", errs == 0)
+wipe(P.triggers)
+WB.TriggerManager:Reset()
+check("item use idle again", not WB.ItemUse.active)
 
 check("no error handler calls", not ERRORS, ERRORS)
 realPrint(string.format("RESULT: %d passed, %d failed", pass, fail))

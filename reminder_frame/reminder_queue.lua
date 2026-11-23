@@ -14,6 +14,7 @@ end
 -- instead of appearing twice.
 function ReminderQueue:AddToQueue(activity)
     local queue = Queue()
+    WorkoutBuddy.ReminderEvents:NoteAdded(activity) -- for the boss fight / instance recap
     for _, w in ipairs(queue) do
         if w.name == activity.name and (w.unit or "") == (activity.unit or "") then
             w.amount = (tonumber(w.amount) or 0) + (tonumber(activity.amount) or 0)
