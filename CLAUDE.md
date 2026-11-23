@@ -1,6 +1,6 @@
 # Workout Buddy: notes for contributors and coding assistants
 
-Workout Buddy is an Ace3-based World of Warcraft addon. One package supports WoW Forever (interface 16001), Midnight / Retail (120105, 120107) and Classic Era (11509). See `README.md` for features, layout and the release steps.
+Workout Buddy is a World of Warcraft addon built on a few Ace3 modules (addon, events, saved variables) with its own settings UI in `ui/`. One package supports WoW Forever (interface 16001), Midnight / Retail (120105, 120107) and Classic Era (11509). See `README.md` for features, layout and the release steps.
 
 ## Getting started on a new machine
 
@@ -27,12 +27,13 @@ Running unpackaged shows version "dev" because the TOC holds `@project-version@`
 - **APIs:** prefer namespaced APIs (`C_AddOns`, `C_Timer`, `C_EventUtils`) with fallbacks.
 - **Custom triggers** are dispatched only from `trigger_manager.lua`. Do not call `TriggerManager:HandleEvent` from other handlers, or triggers fire twice.
 - **Saved variables:** AceDB copies defaults in once at load. Setting a key to `nil` later does not restore its default; assign the default explicitly. Add upgrades for older saved data to `WorkoutBuddy:MigrateProfile`.
-- **Imports never run code.** Workout lists use the parser in `config/importexport.lua`; profiles use AceSerializer, and imported Lua conditions stay disabled until reviewed.
+- **Imports never run code.** Workout lists use the parser in `sharing.lua`; profiles use AceSerializer, and imported Lua conditions stay disabled until reviewed.
 - **UI frames** are created once and reused (see the row pool in `reminder_frame/reminder_core.lua`).
+- **Settings window:** pages are lists of specs in `ui/page_*.lua` and `ui/pages.lua`; `ui/window.lua` builds each row once and re-lays it out. Every spec with a label (or a `search` field) is found by the search. Keep logic out of the UI: trigger rules live in `trigger_list.lua`, imports in `sharing.lua`. Colors come from `UI.THEMES`; paint with `UI.Tex`/`UI.Text` roles so theme changes repaint.
 
 ## Libraries
 
-Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), LibDBIcon-1.0 and LibDataBroker-1.1, LibSharedMedia-3.0 (from the WowAce repositories). When updating them, keep only the modules the TOC loads and run the tests.
+Bundled in `Libs/` (not fetched at package time): Ace3 modules AceAddon, AceConsole, AceEvent, AceDB and AceSerializer with LibStub and CallbackHandler (from WoWUIDev/Ace3), LibDBIcon-1.0 and LibDataBroker-1.1, LibSharedMedia-3.0 (from the WowAce repositories). When updating them, keep only the modules the TOC loads and run the tests.
 
 ## Before committing
 
@@ -44,8 +45,8 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 
 - **Released:** 2.2.2 (tag pushed 2026-11-22): window footer and height fix, page screenshots. First release meant for the public page.
 - **Previous:** 2.2.1 (`/wob demo`), 2.2.0 (quiet hours; tested in game by Tim), 2.1.0.
-- **Unreleased (committed locally, not pushed):** 2.3.0, set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), and the boss fight and instance recap. Requested by a user (ordsneakysneaky, 2026-10-09). Needs an in-game test before release.
-- **Tests:** 198 passing (`npm test` in `tests`).
+- **Unreleased (committed locally, not pushed):** 2.3.0: new settings window (own UI kit, side navigation, search, themes), set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), and the boss fight and instance recap. Item triggers requested by a user (ordsneakysneaky, 2026-10-09). Tim is testing it in game through the dev link (CurseForge copy backed up at `_forever_\Interface\WorkoutBuddy-curseforge-backup`; restore it after release).
+- **Tests:** 225 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
 ## Open work

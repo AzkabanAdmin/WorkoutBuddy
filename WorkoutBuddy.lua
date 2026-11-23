@@ -81,10 +81,7 @@ function WorkoutBuddy:DbgPrint(...)
     end
 end
 
-function WorkoutBuddy:NotifyConfigChanged()
-    local reg = LibStub("AceConfigRegistry-3.0", true)
-    if reg then reg:NotifyChange("WorkoutBuddy") end
-end
+-- NotifyConfigChanged, OpenConfig and InitConfig live in ui/window.lua.
 
 ------------------------------------------------------------------------
 -- Copy helper (shows a selectable edit box; addons cannot write the
@@ -130,6 +127,7 @@ WorkoutBuddy.DEFAULT_WORKOUTS = {
 local defaults = {
     profile = {
         enabled = true,
+        theme = "forest", -- settings and workout window colors (ui/widgets.lua THEMES)
         login_message = true,
         workouts = nil, -- seeded from DEFAULT_WORKOUTS on first use
         workouts_seeded = false,

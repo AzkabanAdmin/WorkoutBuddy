@@ -93,6 +93,20 @@ function ReminderCore:ApplyOptions()
     if f.resizer then f.resizer:SetShown(not o.locked) end
 end
 
+--- Color the window with the theme chosen in Window & look.
+function ReminderCore:ApplyTheme()
+    local f = self.frame
+    if not f then return end
+    local th = WorkoutBuddy.UI.Theme()
+    local h, a, bg = th.header, th.accent, th.bg
+    ApplyGradient(f.headerBg, { math.min(1, h[1] * 1.7), math.min(1, h[2] * 1.7), math.min(1, h[3] * 1.7), 0.98 }, { h[1], h[2], h[3], 0.92 })
+    f.headerLine:SetColorTexture(a[1], a[2], a[3], 0.8)
+    if f.SetBackdropColor then
+        f:SetBackdropColor(bg[1], bg[2], bg[3], 0.92)
+        f:SetBackdropBorderColor(a[1] * 0.7, a[2] * 0.7, a[3] * 0.7, 0.85)
+    end
+end
+
 function ReminderCore:CenterFrame(save)
     if save then
         local o = Opts()
@@ -158,14 +172,13 @@ function ReminderCore:CreateFrame()
     headerBg:SetPoint("TOPLEFT", f, "TOPLEFT", 3, -3)
     headerBg:SetPoint("TOPRIGHT", f, "TOPRIGHT", -3, -3)
     headerBg:SetHeight(HEADER_H)
-    ApplyGradient(headerBg, THEME.headerStart, THEME.headerEnd)
+    f.headerBg = headerBg
 
     local headerLine = f:CreateTexture(nil, "ARTWORK")
     headerLine:SetPoint("TOPLEFT", headerBg, "BOTTOMLEFT")
     headerLine:SetPoint("TOPRIGHT", headerBg, "BOTTOMRIGHT")
     headerLine:SetHeight(1)
-    local hl = THEME.headerLine
-    headerLine:SetColorTexture(hl[1], hl[2], hl[3], hl[4])
+    f.headerLine = headerLine
 
     local titleIcon = f:CreateTexture(nil, "OVERLAY")
     titleIcon:SetSize(20, 20)
@@ -261,6 +274,7 @@ function ReminderCore:CreateFrame()
     tinsert(UISpecialFrames, f:GetName()) -- Escape closes it
     f:Hide()
     self:ApplyOptions()
+    self:ApplyTheme()
     return f
 end
 
@@ -480,6 +494,7 @@ end
 
 function ReminderCore:OnProfileChanged()
     self:ApplyOptions()
+    self:ApplyTheme()
     self:UpdateDisplay()
 end
 

@@ -3,6 +3,11 @@
 ## 2.3.0
 
 ### New
+- **A new settings window.** Workout Buddy now has its own settings window instead of the standard options panel: pages on the left (Triggers, Workouts, Hydration, Quiet hours, Window & look, Stats, Profiles), a short description under every option, and everything scrolls.
+  - **Search every setting** from the box at the top. Results show from every page, and clicking through jumps to the setting.
+  - **One Triggers page.** Every trigger is one row with its on/off switch and what it gives (a random workout, a set workout and amount, or opening the window). Only the triggers you use are listed; "+ Add a trigger" walks you through when, details and what it gives.
+  - **Themes:** Forest (default), Midnight, Ember, Violet and Classic gold, for the settings and the workout window.
+  - The game's Options > AddOns entry has a button that opens it, and /wob still does.
 - **Set workouts per action.** Make something in the game always cost a specific workout, every time it happens. For example: each mana potion adds 3 push-ups and each death adds 5 burpees. Repeats add up in one row, so ten potions become Push-ups x30.
   - Custom triggers have a new action, "Add a set workout every time". These skip the minimum time between suggestions, so every occurrence counts.
   - Built-in events (You died, Boss defeated, Level up and the rest) can each have a set workout instead of a random one. Find it under Workouts > Set workouts for events.

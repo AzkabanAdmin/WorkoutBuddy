@@ -14,9 +14,6 @@ Libs\Ace3\AceAddon-3.0\AceAddon-3.0.xml
 Libs\Ace3\AceConsole-3.0\AceConsole-3.0.xml
 Libs\Ace3\AceEvent-3.0\AceEvent-3.0.xml
 Libs\Ace3\AceDB-3.0\AceDB-3.0.xml
-Libs\Ace3\AceDBOptions-3.0\AceDBOptions-3.0.xml
-Libs\Ace3\AceGUI-3.0\AceGUI-3.0.xml
-Libs\Ace3\AceConfig-3.0\AceConfig-3.0.xml
 Libs\Ace3\AceSerializer-3.0\AceSerializer-3.0.xml
 Libs\LibSharedMedia-3.0\lib.xml
 Libs\LibDBIcon-1.0\LibDataBroker-1.1\LibDataBroker-1.1.lua
@@ -40,15 +37,13 @@ reminder_frame\reminder_queue.lua
 reminder_frame\reminder_events.lua
 reminder_frame\reminder_core.lua
 
-# Options
-config\workout_library.lua
-config\general.lua
-config\automation.lua
-config\workouts.lua
-config\hydration.lua
-config\quiet_hours.lua
-config\display.lua
-config\stats.lua
-config\importexport.lua
-config.lua
+# Settings window
+workout_library.lua
+sharing.lua
+trigger_list.lua
+ui\widgets.lua
+ui\window.lua
+ui\page_triggers.lua
+ui\page_workouts.lua
+ui\pages.lua
 minimap_button.lua

@@ -1,5 +1,6 @@
--- config/importexport.lua
--- Share workout lists and back up whole profiles.
+-- sharing.lua
+-- Share workout lists and back up whole profiles (logic only; the
+-- Profiles page in ui/ provides the boxes).
 --
 -- Imports never run code. Workout lists are read by a small parser that only
 -- understands { name = "...", amount = 10, unit = "..." } entries, and profiles
@@ -7,15 +8,12 @@
 -- profile stay switched off until the player reviews and saves them.
 
 local _, WorkoutBuddy = ...
-WorkoutBuddy.ConfigTabs = WorkoutBuddy.ConfigTabs or {}
-
 local AceSerializer = LibStub("AceSerializer-3.0")
 
 local MAX_WORKOUTS = 200
 local MAX_NAME = 80
 local PROFILE_PREFIX = "WOB1:"
 
-local pending = { workouts = "", profile = "" }
 
 ------------------------------------------------------------------------
 -- Workout list format
@@ -237,89 +235,4 @@ function WorkoutBuddy:DeserializeProfile(str)
         self:Print(string.format("|cFFFF8800%d imported trigger(s) contain Lua code and were switched off. Review them in General > Custom triggers and save to enable.|r", flagged))
     end
     return true
-end
-
-------------------------------------------------------------------------
--- Tab
-------------------------------------------------------------------------
-function WorkoutBuddy.ConfigTabs.ImportExport()
-    return {
-        type = "group",
-        name = "Import/Export",
-        order = 6,
-        args = {
-            workoutsHeader = { type = "header", name = "Workout list", order = 1 },
-            exportBox = {
-                type = "input",
-                name = "Export (copy this to share your list)",
-                width = "full",
-                multiline = 4,
-                order = 2,
-                get = function() return WorkoutBuddy:SerializeWorkouts() end,
-                set = function() end,
-            },
-            importBox = {
-                type = "input",
-                name = "Import (paste a list here, then click Import)",
-                width = "full",
-                multiline = 4,
-                order = 3,
-                get = function() return pending.workouts end,
-                set = function(_, val) pending.workouts = val end,
-            },
-            importButton = {
-                type = "execute",
-                name = "Import",
-                order = 4,
-                disabled = function() return strtrim(pending.workouts) == "" end,
-                confirm = true,
-                confirmText = "Replace your current workout list with the imported one?",
-                func = function()
-                    if WorkoutBuddy:DeserializeWorkouts(pending.workouts) then
-                        pending.workouts = ""
-                        WorkoutBuddy:RebuildWorkoutListOptions()
-                        WorkoutBuddy:NotifyConfigChanged()
-                    end
-                end,
-            },
-
-            profileHeader = { type = "header", name = "Whole profile", order = 10 },
-            profileDesc = {
-                type = "description",
-                name = "Backs up every setting, workout, trigger and your stats history.",
-                order = 10.5,
-            },
-            profileExportBox = {
-                type = "input",
-                name = "Export",
-                width = "full",
-                multiline = 4,
-                order = 11,
-                get = function() return WorkoutBuddy:SerializeProfile() end,
-                set = function() end,
-            },
-            profileImportBox = {
-                type = "input",
-                name = "Import",
-                width = "full",
-                multiline = 4,
-                order = 12,
-                get = function() return pending.profile end,
-                set = function(_, val) pending.profile = val end,
-            },
-            profileImportButton = {
-                type = "execute",
-                name = "Import profile",
-                order = 13,
-                disabled = function() return strtrim(pending.profile) == "" end,
-                confirm = true,
-                confirmText = "Overwrite every setting in the current profile?",
-                func = function()
-                    if WorkoutBuddy:DeserializeProfile(pending.profile) then
-                        pending.profile = ""
-                    end
-                end,
-            },
-        },
-    }
 end

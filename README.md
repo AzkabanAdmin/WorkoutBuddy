@@ -61,7 +61,9 @@ Extract the zip so the folder `WorkoutBuddy` sits inside your game's AddOns fold
 | `media/` | Screenshots and the CurseForge description (not packaged); `scripts/media.py` collects, crops and builds GIFs |
 | `Sounds.lua` | Sound registration through LibSharedMedia |
 | `reminder_frame/` | Queue window: state, queue, auto-open events, UI |
-| `config.lua`, `config/` | Options tabs (AceConfig) and the trigger editor |
+| `ui/` | Settings window (own UI kit, no AceConfig/AceGUI): `widgets.lua` themes and widgets, `window.lua` navigation, search and page renderer, `page_*.lua` and `pages.lua` the pages |
+| `trigger_list.lua` | One list of built-in and custom triggers for the Triggers page, with validation |
+| `sharing.lua`, `workout_library.lua` | Import/export (never runs code) and the built-in exercise library |
 | `minimap_button.lua` | LibDataBroker launcher, minimap button, addon compartment |
 
 ### Client compatibility rules

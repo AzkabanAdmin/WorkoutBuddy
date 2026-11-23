@@ -279,7 +279,7 @@ check("login message", chatHas("loaded"))
 check("first run shows frame", WB.ReminderFrame and WB.ReminderFrame:IsShown())
 check("builtin unsupported hidden", WB:IsBuiltInTriggerSupported("achievement") == false)
 check("builtin supported", WB:IsBuiltInTriggerSupported("boss_kill") == true)
-check("options table", WB.options and WB.options.args.general and WB.options.args.profile)
+check("settings window registered", WB.SettingsUI and WB.SettingsUI.pages.triggers and WB.SettingsUI.blizzardPanel)
 
 -- Level up -> suggestion
 FireEvent("PLAYER_LEVEL_UP", 2)
@@ -476,46 +476,79 @@ WB.db:SetProfile("Second")
 check("new profile seeded", #WB.db.profile.workouts == #WB.DEFAULT_WORKOUTS)
 WB.db:SetProfile("Default")
 
--- Option getters/setters: walk every option and call get, values, name, hidden, disabled
+-- Settings window: open every page, render it, and call every spec function
+local SUI, UIK = WB.SettingsUI, WB.UI
+UIK.autoConfirm = true
 local walked, errs = 0, 0
-local function walk(group, info)
-    for k, opt in pairs(group.args or {}) do
-        local inf = { k, handler = WB, options = WB.options, appName = "WorkoutBuddy" }
-        if group == WB.options and k == "profile" then inf = { k, handler = opt.handler, options = WB.options } end
-        for _, fld in ipairs({ "name", "desc", "hidden", "disabled", "values", "get", "sorting" }) do
-            if type(opt[fld]) == "function" then
-                walked = walked + 1
-                local ok2, e = pcall(opt[fld], inf)
-                if not ok2 then errs = errs + 1 realPrint("OPTION ERROR " .. k .. "." .. fld .. ": " .. tostring(e)) end
+local function walk()
+    for _, page in ipairs(SUI.order) do
+        local okShow, eShow = pcall(SUI.Show, SUI, page.key)
+        if not okShow then errs = errs + 1 realPrint("PAGE ERROR " .. page.key .. ": " .. tostring(eShow)) end
+        if page.count then
+            local okC, eC = pcall(page.count)
+            if not okC then errs = errs + 1 realPrint("COUNT ERROR " .. page.key .. ": " .. tostring(eC)) end
+        end
+        for i, spec in ipairs(SUI:Specs(page)) do
+            for _, fld in ipairs({ "label", "desc", "hidden", "disabled", "values", "get", "text" }) do
+                if type(spec[fld]) == "function" then
+                    walked = walked + 1
+                    local ok2, e = pcall(spec[fld])
+                    if not ok2 then errs = errs + 1 realPrint("SPEC ERROR " .. page.key .. "#" .. i .. "." .. fld .. ": " .. tostring(e)) end
+                end
             end
         end
-        if opt.type == "group" then walk(opt, inf) end
     end
 end
-local savedProfile = WB.options.args.profile; WB.options.args.profile = nil; walk(WB.options); WB.options.args.profile = savedProfile
-check("options callable (" .. walked .. ")", errs == 0)
+SUI.FindSpec = function(pageKey, label)
+    for _, spec in ipairs(SUI:Specs(SUI.pages[pageKey])) do
+        local l = type(spec.label) == "function" and spec.label() or spec.label
+        if spec.type ~= "section" and (l == label or (spec.search and spec.search.label == label)) then return spec end
+    end
+end
+walk()
+check("settings pages render (" .. walked .. ")", errs == 0 and walked > 50, walked)
+check("settings window shown", SUI:IsShown())
+check("all pages registered", #SUI.order == 7, #SUI.order)
 
--- Execute safe buttons
-local wo = WB.options.args.workouts.args
-wo.category.set(nil, "Strength")
-wo.pick.set(nil, select(2, (function() local v, o = nil, nil; return nil, wo.sorting and nil end)()) or "1")
-local vals = wo.pick.values()
-local firstKey = next(vals)
-wo.pick.set(nil, firstKey)
+-- Workout library and adding your own
 local n0 = #WB.db.profile.workouts
-wo.addPick.func()
-check("library add", #WB.db.profile.workouts == n0 + 1)
-wo.addPick.func()
-check("library no duplicates", #WB.db.profile.workouts == n0 + 1)
-wo.addCategory.func()
+local lib = SUI.FindSpec("workouts", "Workout library")
+SUI:Show("workouts")
+local libRow = lib._row
+local firstItem = libRow.items[1]
+firstItem.add._scripts.OnClick(firstItem.add)
+check("library add", #WB.db.profile.workouts == n0 + 1, #WB.db.profile.workouts)
+firstItem = libRow.items[1]
+check("library row shows in list", firstItem.add.label:GetText() == "In your list")
+check("library no duplicates", not WB:AddWorkout(firstItem.w.name, 5, firstItem.w.unit))
+libRow.addAll._scripts.OnClick(libRow.addAll)
 check("add category", #WB.db.profile.workouts > n0 + 1)
-WB:RebuildWorkoutListOptions()
-local savedProfile = WB.options.args.profile; WB.options.args.profile = nil; walk(WB.options); WB.options.args.profile = savedProfile
-check("options after rebuild", errs == 0)
+check("add your own", WB:AddWorkout("Desk Push-ups", 12, "reps") and not WB:AddWorkout("desk push-ups", 1, "reps"))
+walk()
+check("pages after changes", errs == 0)
 
--- Trigger editor opens (AceGUI) without error
-local okEd, eEd = pcall(function() WB:OpenTriggerEditor("workout") end)
-check("trigger editor opens", okEd, eEd)
+-- Search finds settings across pages
+local res = SUI:SearchResults("sound")
+local pagesFound = {}
+for _, g in ipairs(res) do pagesFound[g.page.key] = #g.specs end
+check("search sound finds triggers and hydration", pagesFound.triggers and pagesFound.hydration, next(pagesFound))
+check("search multiple words", #SUI:SearchResults("quiet hours clock") >= 1)
+check("search custom areas", (function()
+    for _, g in ipairs(SUI:SearchResults("potions")) do if g.page.key == "triggers" then return true end end
+end)())
+check("search nothing", #SUI:SearchResults("zzqqxx") == 0)
+local okS, eS = pcall(SUI.SetSearch, SUI, "theme")
+check("search renders", okS and SUI.searchText == "theme", eS)
+local themeSpec = SUI.FindSpec("window", "Theme")
+pcall(SUI.GoTo, SUI, "window", themeSpec)
+check("search jump goes to page", SUI.current == "window" and SUI.searchText == "")
+
+-- Theme switch repaints and colors the workout window
+themeSpec.set("ember")
+check("theme saved", WB.db.profile.theme == "ember" and UIK.Theme() == UIK.THEMES.ember)
+local okT2 = pcall(UIK.Repaint)
+check("theme repaint", okT2)
+themeSpec.set("forest")
 
 -- Slash commands
 for _, c in ipairs({ "help", "show", "now", "water", "stats", "pause", "resume", "center", "minimap", "minimap", "bogus" }) do
@@ -745,7 +778,7 @@ WB.Hydration:SetUnit("oz")
 
 -- Reset size restores the default size
 WB.db.profile.reminder_frame.width, WB.db.profile.reminder_frame.height = 500, 400
-WB.options.args.display.args.resetSize.func()
+SUI.FindSpec("window", "Show, center or reset the workout window").items[3].func()
 check("reset size uses defaults", WB.db.profile.reminder_frame.width == 340 and WB.db.profile.reminder_frame.height == 200)
 
 ----------------------------------------------------------------------------
@@ -837,16 +870,30 @@ check("set workout per death", queued("Burpees") == 10, queued("Burpees"))
 check("set workout announced out of combat", chatHas("You Died.*Burpees x5"))
 
 -- Choosing it in the Workouts tab
-local setArgs = WB.options.args.workouts.args.setWorkouts.args
-check("set workout option shows choice", setArgs.player_death.get() == "Burpees|reps", setArgs.player_death.get())
-setArgs.player_death.set(nil, "__random")
+-- The same through the trigger list (Triggers page rows)
+local TLm = WB.TriggerList
+local function entryFor(id)
+    for _, e in ipairs(TLm:Entries()) do if e.id == id then return e end end
+end
+local deathEntry = entryFor("b:player_death")
+check("trigger list shows death with set workout", deathEntry and deathEntry.gives.mode == "set"
+    and deathEntry.gives.workout.name == "Burpees")
+TLm:SetGives(deathEntry, "random")
 check("set workout back to random", P.builtin_workouts.player_death == nil)
 local firstW = P.workouts[1]
-setArgs.levelup.set(nil, firstW.name .. "|" .. firstW.unit)
-setArgs.levelup_amount.set(nil, "7")
+P.event_map.levelup = true
+TLm:SetGives(entryFor("b:levelup"), "set", { name = firstW.name, amount = 7, unit = firstW.unit })
 check("set workout chosen from list", P.builtin_workouts.levelup and P.builtin_workouts.levelup.amount == 7
     and P.builtin_workouts.levelup.name == firstW.name)
-setArgs.levelup.set(nil, "__random")
+TLm:SetGives(entryFor("b:levelup"), "random")
+check("only enabled built-ins listed", entryFor("b:xpbubble") == nil and entryFor("b:levelup") ~= nil)
+TLm:SetEnabled(entryFor("b:levelup"), false)
+check("switched off stays visible until reopened", entryFor("b:levelup") and not entryFor("b:levelup").enabled)
+TLm:ResetVisibility()
+check("hidden after reopening", entryFor("b:levelup") == nil)
+local availableBefore = #TLm:AvailableBuiltins()
+TLm:AddBuiltin("levelup", "random")
+check("add a built-in", P.event_map.levelup and #TLm:AvailableBuiltins() == availableBefore - 1)
 P.builtin_workouts.player_death = { name = "Burpees", amount = 5, unit = "reps" }
 
 -- Mock bags: Classic-style consumables (subclass 0) so presets fall back to names
@@ -907,14 +954,20 @@ FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-5", 5004)
 check("new bag item counted", queued("Push-ups") == 33, queued("Push-ups"))
 
 -- Random action on an item trigger still works, and the editor opens on item and set triggers
-local okEd2, eEd2 = pcall(function() WB:OpenTriggerEditor(nil, 1) end)
-check("editor opens on item trigger", okEd2, eEd2)
-local okEd3, eEd3 = pcall(function() WB:OpenTriggerEditor("fixed") end)
-check("editor opens for new set trigger", okEd3, eEd3)
-WB:RebuildCustomEventToggles()
-local row = WB.options.args.general.args.customTriggers.args.t1
-check("trigger list label", row and row.args.toggle.name:find("Mana potion") and row.args.toggle.name:find("adds Push%-ups x3"),
-    row and row.args.toggle.name)
+-- Triggers page: rows, the add form and editing
+SUI:Show("triggers")
+local trigList = SUI.FindSpec("triggers", "Your triggers")
+local mana = entryFor("c:1")
+check("trigger list row label", mana and mana.label == "Mana potion" and mana.gives.mode == "set"
+    and mana.sub:find("Using any potion"), mana and mana.sub)
+check("trigger rows rendered", trigList._row and trigList._row.entryRows[1] and trigList._row.entryRows[1]:IsShown())
+local okEd2, eEd2 = pcall(SUI.OpenTriggerForm, SUI, 1)
+check("edit form opens on item trigger", okEd2 and SUI.form and SUI.form.kind == "item" and SUI.form.index == 1, eEd2)
+local okSave, eSave = pcall(SUI.SaveTriggerForm, SUI)
+check("edit form saves", okSave and SUI.form == nil and P.triggers[1].workout.amount == 3, eSave)
+local okEd3, eEd3 = pcall(SUI.OpenTriggerForm, SUI)
+check("add form opens on the tiles", okEd3 and SUI.form and SUI.form.kind == nil, eEd3)
+SUI:CloseTriggerForm()
 
 -- Saved data upkeep: a set trigger without a valid workout falls back to random
 table.insert(P.triggers, { name = "Broken set", event = "PLAYER_DEAD", action = "fixed", enabled = true, options = {}, workout = { amount = 3 } })
@@ -976,8 +1029,8 @@ check("quiet hours pause set workouts", queued("Burpees") == burpeesBefore)
 P.quiet_hours.workouts.enabled = false
 
 -- Options still callable with the new settings
-local savedProfile2 = WB.options.args.profile; WB.options.args.profile = nil; walk(WB.options); WB.options.args.profile = savedProfile2
-check("options callable with set workouts", errs == 0)
+walk()
+check("settings pages with set workouts", errs == 0)
 wipe(P.triggers)
 WB.TriggerManager:Reset()
 check("item use idle again", not WB.ItemUse.active)
@@ -1012,9 +1065,58 @@ captured = false
 IU:Capture(function(name) captured = name end, 30)
 Advance(31)
 check("capture times out", captured == nil)
-local okQuick, eQuick = pcall(WB.options.args.general.args.addItem.func)
-check("count an item button opens editor", okQuick and WB.triggerEditor ~= nil, eQuick)
-WB.triggerEditor:Hide()
+SUI:Show("triggers")
+local itemBtn = SUI.FindSpec("triggers", "Your triggers")._row.itemBtn
+local okQuick, eQuick = pcall(itemBtn._scripts.OnClick, itemBtn)
+check("count an item button opens the item form", okQuick and SUI.form and SUI.form.kind == "item", eQuick)
+-- add items the beginner ways: bag list, use-it-to-add-it, typing
+local okBag = pcall(SUI.AddFormItem, SUI, IU:BagItems()[2].displayName)
+check("form: add from bags", okBag and SUI.form.t.options.items == IU:BagItems()[2].displayName, SUI.form.t.options.items)
+SUI.form.typed = "quail"
+SUI:LayoutSuggestions()
+local sugRow = SUI.triggerListRow.form.suggestions[1]
+check("form: typing suggests", sugRow and sugRow:IsShown() and sugRow.name == "Roasted Quail")
+sugRow._scripts.OnClick(sugRow)
+check("form: click suggestion adds", #IU.NameList(SUI.form.t.options.items) == 2)
+local capBtn = SUI.triggerListRow.form.capture
+capBtn._scripts.OnClick(capBtn)
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-11", 5002) -- Healthstone, not yet in the list
+check("form: use an item to add it", #IU.NameList(SUI.form.t.options.items) == 3, SUI.form.t.options.items)
+SUI.form.t.workout = { name = "Squats", amount = 4, unit = "reps" }
+SUI.triggerListRow.form.wName:SetText("Squats")
+SUI.triggerListRow.form.wAmount:SetText("4")
+SUI.triggerListRow.form.wUnit:SetText("reps")
+local countBefore = #P.triggers
+check("form: save item trigger", SUI:SaveTriggerForm() and #P.triggers == countBefore + 1)
+local saved = P.triggers[#P.triggers]
+check("form: auto name and set workout", saved.event == "ITEM_USED" and saved.name:find("Healthstone")
+    and saved.workout.name == "Squats" and saved.workout.amount == 4, saved.name)
+-- a built-in added through the form
+SUI:OpenTriggerForm()
+SUI.form.builtin = "quest_turnin"
+SUI:SetFormGives("set")
+SUI.triggerListRow.form.wName:SetText("Lunges")
+SUI.triggerListRow.form.wAmount:SetText("6")
+SUI.triggerListRow.form.wUnit:SetText("reps")
+check("form: add built-in with set workout", SUI:SaveTriggerForm() and P.event_map.quest_turnin
+    and P.builtin_workouts.quest_turnin.name == "Lunges" and P.builtin_workouts.quest_turnin.amount == 6)
+-- validation message instead of saving
+SUI:OpenTriggerForm(nil, "ITEM_USED")
+SUI.form.t.options.preset = "named"
+check("form: empty item list is refused", not SUI:SaveTriggerForm() and SUI.form ~= nil)
+SUI:CloseTriggerForm()
+-- any game event: search list
+SUI:OpenTriggerForm()
+SUI.form.kind = "event"
+SUI.form.t.event = nil
+SUI:Render()
+SUI.form.eventFilter = "loot"
+SUI:LayoutEventList()
+local evRow = SUI.triggerListRow.form.eventRows[1]
+check("form: event search filters", evRow and evRow:IsShown() and evRow.evt:find("LOOT"), evRow and evRow.evt)
+evRow._scripts.OnClick(evRow)
+check("form: pick event keeps the form", SUI.form and SUI.form.t.event == evRow.evt)
+SUI:CloseTriggerForm()
 
 check("no error handler calls", not ERRORS, ERRORS)
 realPrint(string.format("RESULT: %d passed, %d failed", pass, fail))
