@@ -559,6 +559,9 @@ function Settings:CheckLayout()
         for _, issue in ipairs(UI.FindOverlaps(self.frame)) do
             found[#found + 1] = page.label .. ": " .. issue
         end
+        for _, issue in ipairs(UI.FindZeroSize(self.frame)) do
+            found[#found + 1] = page.label .. ": " .. issue
+        end
     end
     self:Show(before)
     return found

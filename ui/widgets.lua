@@ -572,6 +572,29 @@ function UI.FindOverlaps(root, out, depth)
     return out
 end
 
+--- Visible containers with no width or height that still hold visible
+-- things. The game may not draw the contents of a frame without a size,
+-- so every container gets one.
+function UI.FindZeroSize(root, out, depth)
+    out = out or {}
+    depth = depth or 0
+    if depth > 12 or not Visible(root) then return out end
+    local hasContent = #Elements(root) > 0
+    if not hasContent then
+        for _, region in ipairs({ root:GetRegions() }) do
+            if Visible(region) and region:GetObjectType() == "Texture" then hasContent = true break end
+        end
+    end
+    local w, h = root:GetWidth() or 0, root:GetHeight() or 0
+    if hasContent and (w < 1 or h < 1) then
+        out[#out + 1] = Describe(root) .. string.format(" has no size (%dx%d)", w, h)
+    end
+    for _, child in ipairs({ root:GetChildren() }) do
+        if Visible(child) then UI.FindZeroSize(child, out, depth + 1) end
+    end
+    return out
+end
+
 ------------------------------------------------------------------------
 -- Scroll area: a ScrollFrame with a content frame and a slim scroll bar
 ------------------------------------------------------------------------

@@ -648,7 +648,9 @@ function Settings:LayoutTriggerForm(row, width)
         f.save:Hide()
         f.cancel:Hide()
         f.name:Hide()
-        return y + 10
+        y = y + 10
+        f:SetHeight(y) -- a container with no height may not draw its contents in game
+        return y
     end
 
     -- chosen: summary line

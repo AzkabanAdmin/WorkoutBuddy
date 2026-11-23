@@ -84,7 +84,7 @@ local Methods = {}
 local FrameMT = { __index = function(t, k) if Methods[k] then return Methods[k] end if type(k) == "string" and k:match("^[A-Z]") then return noop end return nil end }
 local REGION_KINDS = { Texture = true, FontString = true, MaskTexture = true }
 local function NewObject(kind, name, parent)
-    local o = setmetatable({ _kind = kind, _scripts = {}, _events = {}, _w = 100, _h = 20,
+    local o = setmetatable({ _kind = kind, _scripts = {}, _events = {}, _w = 0, _h = 0, -- the game starts frames at 0x0
         _shown = true, _name = name, _alpha = 1, _pts = {}, _kids = {}, _regions = {} }, FrameMT)
     if name then _G[name] = o end
     if parent then o:SetParent(parent) end
@@ -1230,7 +1230,15 @@ UIK.pairsChecked = 0
 check("no overlaps on any page", Overlaps("pages") == 0)
 check("overlap check measured real layouts", UIK.pairsChecked > 500, UIK.pairsChecked)
 -- the trigger form in each state
+local function LayoutIssues()
+    local list = UIK.FindOverlaps(SUI.frame)
+    for _, z in ipairs(UIK.FindZeroSize(SUI.frame)) do list[#list + 1] = z end
+    return list
+end
+-- like the first click in game: the reused form container starts with no height
+if SUI.triggerListRow and SUI.triggerListRow.form then SUI.triggerListRow.form:SetHeight(0) end
 SUI:OpenTriggerForm()
+check("add tiles: form container has a size", #UIK.FindZeroSize(SUI.frame) == 0, UIK.FindZeroSize(SUI.frame)[1])
 check("no overlaps: add tiles", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
 SUI:OpenTriggerForm(nil, "ITEM_USED")
 SUI:AddFormItem("Major Mana Potion")
@@ -1238,18 +1246,18 @@ SUI:AddFormItem("Healthstone")
 SUI.form.typed = "po"
 SUI:Render()
 SUI:SetFormGives("set")
-check("no overlaps: item form", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+check("no layout issues: item form", #LayoutIssues() == 0, LayoutIssues()[1])
 SUI:OpenTriggerForm()
 SUI.form.kind = "event"
 SUI.form.t.event = "LOOT_OPENED"
 SUI.form.showLua = true
 SUI:Render()
-check("no overlaps: event form", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+check("no layout issues: event form", #LayoutIssues() == 0, LayoutIssues()[1])
 SUI:OpenTriggerForm()
 SUI.form.kind = "health"
 SUI.form.t.event = "UNIT_HEALTH"
 SUI:Render()
-check("no overlaps: health form", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+check("no layout issues: health form", #LayoutIssues() == 0, LayoutIssues()[1])
 SUI:CloseTriggerForm()
 -- the checker itself catches a collision
 SUI:Show("stats")
