@@ -12,6 +12,7 @@
 - **Type exact values.** Every slider has a number box next to it.
 - **Background opacity** for the workout window and the hydration popup fades only the dark background, so you can keep the text and buttons solid. Overall opacity still fades everything.
 - The hydration popup follows the theme.
+- **Workout window options:** hide the title bar, hide the close button, and close the window automatically once every workout is done (all under Window & look; the last one is off by default).
 - The "new workouts" chat option now says plainly that only you see those lines.
 - **Options match your game.** Options for content a game does not have are hidden, for example Mythic+ keystones on WoW Forever and Classic Era. If a game adds that content later, the option appears by itself.
 - **Set workouts per action.** Make something in the game always cost a specific workout, every time it happens. For example: each mana potion adds 3 push-ups and each death adds 5 burpees. Repeats add up in one row, so ten potions become Push-ups x30.

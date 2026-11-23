@@ -1331,6 +1331,66 @@ check("slash share without a channel only previews", #SENT == 2 and chatHas("Add
 local okUi = pcall(WB.HandleSlashCommand, WB, "uicheck")
 check("slash uicheck runs", okUi and chatHas("No overlapping controls"))
 
+----------------------------------------------------------------------------
+-- Workout window: title bar, close button, auto-close
+local RFo = WB.db.profile.reminder_frame
+check("window defaults: title bar and close on, auto-close off", RFo.show_header and RFo.show_close and not RFo.autoclose)
+local RC, RFrame = WB.ReminderCore, WB.ReminderFrame
+local function FillQueue(n)
+    WB.ReminderQueue:Clear()
+    for i = 1, n do WB.ReminderQueue:AddToQueue({ name = "Test " .. i, amount = 5, unit = "reps" }) end
+    RC:Show()
+    RC:UpdateDisplay()
+end
+FillQueue(2)
+RC:Complete(1); RC:Complete(1)
+Advance(2)
+check("auto-close off keeps the window open", RFrame:IsShown())
+RFo.autoclose = true
+FillQueue(2)
+RC:Complete(1)
+Advance(2)
+check("auto-close waits for the last workout", RFrame:IsShown())
+RC:Dismiss(1)
+check("auto-close pauses before closing", RFrame:IsShown())
+Advance(2)
+check("auto-close closes once all are done", not RFrame:IsShown())
+FillQueue(1)
+RC:Complete(1)
+WB.ReminderQueue:AddToQueue({ name = "Late arrival", amount = 3, unit = "reps" })
+Advance(2)
+check("auto-close stays open if a new workout arrives", RFrame:IsShown())
+RFo.autoclose = false
+
+local function WindowIssues(label)
+    local list = WB.UI.FindOverlaps(RFrame)
+    for _, z in ipairs(WB.UI.FindZeroSize(RFrame)) do list[#list + 1] = z end
+    for i = 1, math.min(#list, 5) do realPrint("  WINDOW " .. label .. ": " .. list[i]) end
+    return #list
+end
+FillQueue(4)
+for _, combo in ipairs({ { true, true }, { true, false }, { false, true }, { false, false } }) do
+    RFo.show_header, RFo.show_close = combo[1], combo[2]
+    RC:ApplyOptions()
+    RC:UpdateDisplay()
+    local label = (combo[1] and "title" or "no title") .. "/" .. (combo[2] and "close" or "no close")
+    check("workout window layout ok: " .. label, WindowIssues(label) == 0)
+    check("title bar shown as set: " .. label, RFrame.title:IsShown() == combo[1] and RFrame.close:IsShown() == combo[2])
+end
+RFo.show_header = false
+RFo.show_close = true
+RC:ApplyOptions()
+check("no title bar: list moves up but clears the close button",
+    RFrame.scroll:GetTop() < RFrame.close:GetBottom() + 0.5 and RFrame:GetTop() - RFrame.scroll:GetTop() < 30,
+    tostring(RFrame:GetTop() - RFrame.scroll:GetTop()))
+RFo.show_header, RFo.show_close = true, true
+RC:ApplyOptions()
+check("title bar back: list below the header", RFrame:GetTop() - RFrame.scroll:GetTop() >= 40)
+local okTitleSpec = SUI.FindSpec("window", "Show the title bar") and SUI.FindSpec("window", "Show the close button")
+    and SUI.FindSpec("window", "Close the window when every workout is done")
+check("window settings listed", okTitleSpec)
+WB.ReminderQueue:Clear()
+
 -- Game detection per client, and live probes that override the table
 local realBuild = GetBuildInfo
 GetBuildInfo = function() return "12.0.5", "1", "Nov 2026", 120005 end

@@ -230,6 +230,9 @@ local defaults = {
             bg_alpha = 0.92, -- background only; alpha fades everything
             locked = false,
             autocenter = true,
+            show_header = true, -- title bar: icon, name, settings gear
+            show_close = true,
+            autoclose = false, -- close once every workout is done
             initialized = false,
         },
         reminder_events = {

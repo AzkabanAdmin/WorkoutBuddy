@@ -91,6 +91,7 @@ function ReminderCore:ApplyOptions()
         f:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
     end
     if f.resizer then f.resizer:SetShown(not o.locked) end
+    self:LayoutHeader()
 end
 
 --- Color the window with the theme chosen in Window & look. Background
@@ -111,6 +112,49 @@ function ReminderCore:ApplyTheme()
     end
     self.rowAlpha = k
     self:UpdateDisplay()
+end
+
+--- Title bar and close button, each optional (Window & look). Without the
+-- title bar the list moves up; a close button kept on its own gets a small
+-- strip so it never sits on a row's buttons.
+local NO_HEADER_CLOSE = 22
+
+function ReminderCore:LayoutHeader()
+    local f = self.frame
+    if not (f and f.scroll) then return end
+    local o = Opts()
+    local header = o.show_header ~= false
+    local close = o.show_close ~= false
+    for _, region in ipairs({ f.headerBg, f.headerLine, f.titleIcon, f.title, f.gear }) do
+        region:SetShown(header)
+    end
+    f.close:SetShown(close)
+    f.close:ClearAllPoints()
+    if header then
+        f.close:SetSize(32, 32)
+        f.close:SetPoint("TOPRIGHT", 0, 0)
+        f.gear:ClearAllPoints()
+        if close then
+            f.gear:SetPoint("RIGHT", f.close, "LEFT", -2, 0)
+        else
+            f.gear:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, -9)
+        end
+    else
+        f.close:SetSize(NO_HEADER_CLOSE, NO_HEADER_CLOSE)
+        f.close:SetPoint("TOPRIGHT", 1, 1)
+    end
+    local top = header and (HEADER_H + 8) or (close and (NO_HEADER_CLOSE + 2) or 8)
+    f.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -top)
+end
+
+--- After the last workout is done: close the window if the player asked
+-- for it. Waits a moment so the final count is visible.
+function ReminderCore:MaybeAutoClose()
+    if not Opts().autoclose or #Queue() > 0 then return end
+    C_Timer.After(1.5, function()
+        local f = self.frame
+        if f and f:IsShown() and #Queue() == 0 then f:Hide() end
+    end)
 end
 
 function ReminderCore:CenterFrame(save)
@@ -193,26 +237,25 @@ function ReminderCore:CreateFrame()
     titleIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    f.titleIcon = titleIcon
     f.title:SetPoint("LEFT", titleIcon, "RIGHT", 6, 0)
     f.title:SetText(THEME.titleGold .. "Workout Buddy|r")
 
     f.close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    f.close:SetPoint("TOPRIGHT", 0, 0)
     f.close:SetScript("OnClick", function() f:Hide() end)
 
     local gear = CreateFrame("Button", nil, f)
     gear:SetSize(16, 16)
-    gear:SetPoint("RIGHT", f.close, "LEFT", -2, 0)
     gear:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
     gear:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
     gear:SetScript("OnClick", function() WorkoutBuddy:OpenConfig() end)
     gear:SetScript("OnEnter", function(self) ShowTooltip(self, "Settings") end)
     gear:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f.gear = gear
 
     -- Scrolling list (mouse wheel; no template needed)
     f.scroll = CreateFrame("ScrollFrame", nil, f)
-    f.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -(HEADER_H + 8))
-    f.scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, FOOTER_H + 4)
+    f.scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, FOOTER_H + 4) -- top is set by LayoutHeader
     f.scroll:EnableMouseWheel(true)
     f.scroll:SetScript("OnMouseWheel", function(scroll, delta)
         local range = scroll:GetVerticalScrollRange() or 0
@@ -394,11 +437,13 @@ function ReminderCore:Complete(idx)
     WorkoutBuddy.ReminderQueue:RemoveAt(idx)
     WorkoutBuddy.playMinutes = 0
     self:UpdateDisplay()
+    self:MaybeAutoClose()
 end
 
 function ReminderCore:Dismiss(idx)
     WorkoutBuddy.ReminderQueue:RemoveAt(idx)
     self:UpdateDisplay()
+    self:MaybeAutoClose()
 end
 
 function ReminderCore:CommitPartial(idx, amt)
@@ -409,6 +454,7 @@ function ReminderCore:CommitPartial(idx, amt)
     WorkoutBuddy.ReminderQueue:SubtractAmount(idx, amt)
     WorkoutBuddy.playMinutes = 0
     self:UpdateDisplay()
+    self:MaybeAutoClose()
 end
 
 function ReminderCore:ShowPartialInput(idx)

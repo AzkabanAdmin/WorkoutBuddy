@@ -564,6 +564,11 @@ function Settings:CheckLayout()
         end
     end
     self:Show(before)
+    local queueWindow = WorkoutBuddy.ReminderFrame
+    if queueWindow and queueWindow:IsShown() then
+        for _, issue in ipairs(UI.FindOverlaps(queueWindow)) do found[#found + 1] = "Workout window: " .. issue end
+        for _, issue in ipairs(UI.FindZeroSize(queueWindow)) do found[#found + 1] = "Workout window: " .. issue end
+    end
     return found
 end
 
