@@ -2,13 +2,13 @@
 
 **Turns boss kills, deaths, potions and long play sessions into quick exercise, stretch and water breaks.** Free, lightweight, and it never interrupts you in combat.
 
-![The workout window and a water reminder](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/queue.png)
+![The workout window and a water reminder](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/queue.png?v=2.3.0)
 
 ## Why
 
 Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a small, doable workout at natural moments: a boss goes down, you level up, you die (push-ups build character), or you have simply been playing for 45 minutes. Tick it off when you are done and watch your daily goal and streak grow.
 
-![Ticking off workouts](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/goal.gif)
+![Ticking off workouts](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/goal.gif?v=2.3.0)
 
 ## Features
 
@@ -22,21 +22,21 @@ Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a s
 - **A settings window that is easy to find your way around:** pages on the left, a search box for every setting, and five color themes.
 - **Workout library** of desk-friendly exercises, stretches, eye breaks and healthy habits. Edit, add or share your own list.
 
-![Your triggers, each with what it gives](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/triggers.png)
+![Your triggers, each with what it gives](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/triggers.png?v=2.3.0)
 
-![Adding a trigger](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/add-trigger.png)
+![Adding a trigger](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/add-trigger.png?v=2.3.0)
 
-![Counting an item from your bags](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/item-picker.png)
+![Counting an item from your bags](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/item-picker.png?v=2.3.0)
 
-![Your workout list and the library](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/workouts.png)
+![Your workout list and the library](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/workouts.png?v=2.3.0)
 
-![Hydration reminder](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/hydration.png)
+![Hydration reminder](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/hydration.png?v=2.3.0)
 
-![Quiet hours](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/quiet-hours.png)
+![Quiet hours](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/quiet-hours.png?v=2.3.0)
 
-![Stats and streaks](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/stats.png)
+![Stats and streaks](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/stats.png?v=2.3.0)
 
-![Window and look](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/window-look.png)
+![Window and look](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/window-look.png?v=2.3.0)
 
 ## Commands
 
