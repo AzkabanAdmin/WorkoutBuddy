@@ -42,8 +42,8 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 
 ## Status
 
-- **Released:** 2.1.0 (tag pushed 2026-11-22).
-- **Next release:** 2.2.0, committed on `main` and not tagged yet. Adds quiet hours and the review fixes listed in `CHANGELOG.md`. Test quiet hours in game (Quiet Hours tab, `/wob quiet`), then push the tag.
+- **Released:** 2.2.0 (tag pushed 2026-11-22): quiet hours and the review fixes listed in `CHANGELOG.md`. In-game testing pending.
+- **Previous:** 2.1.0 (2026-11-22).
 - **Tests:** 127 passing (`npm test` in `tests`).
 
 ## Open work
