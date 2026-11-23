@@ -49,7 +49,7 @@ Bundled in `Libs/` (not fetched at package time): Ace3 modules AceAddon, AceCons
 - **Released:** 2.3.0 (tag pushed 2026-11-23): new settings window (own UI kit, side navigation, search, five themes), set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), boss fight and instance recap, manual sharing, per-game content detection, workout window options. Item triggers requested by a user (ordsneakysneaky, 2026-10-09). Tested in game by Tim through the dev link; the last two layout fixes (Share preview height, item form gap) were verified offline only.
 - **Previous:** 2.2.2 (screenshots, footer fix), 2.2.1 (`/wob demo`), 2.2.0 (quiet hours), 2.1.0.
 - **After 2.3.0 is approved on CurseForge (Tim):** re-paste `media/curseforge-description.md` and replace the gallery using `media/gallery.md`.
-- **Unreleased (committed locally, not pushed):** 2.4.0, timer for timed workouts (`workout_timer.lua`, stopwatch button on workout window rows). Needs an in-game look before release.
+- **Unreleased (committed locally, not pushed):** 2.4.0, timer for timed workouts (`workout_timer.lua`, stopwatch button on workout window rows). Tim is testing it through the dev link (CurseForge 2.3.0 copy backed up at `_forever_/Interface/WorkoutBuddy-curseforge-backup`; restore it after release). 2.3.0 was approved on CurseForge 2026-11-23.
 - **Tests:** 307 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
