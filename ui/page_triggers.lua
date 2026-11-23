@@ -317,7 +317,10 @@ local function BuildForm(row)
         placeholder = "Type a name, or shift-click an item",
         onChange = function(text)
             Settings.form.typed = text
-            Settings:LayoutSuggestions()
+            Settings:Render() -- room for exactly the suggestions shown
+            local box = Settings.triggerListRow.form.typed.edit
+            box:SetFocus()
+            if box.SetCursorPosition then box:SetCursorPosition(#text) end
         end,
         onCommit = function(text)
             if IU().CleanName(text) ~= "" and Settings.form then
@@ -723,7 +726,7 @@ function Settings:LayoutTriggerForm(row, width)
             y = y + 28
             f.suggestY = y
             self:LayoutSuggestions()
-            y = y + 5 * 21 + 4
+            y = y + #IU():Suggest(form.typed or "", 5) * 21 + 4
         else
             local d = Head(f, "presetdesc", "|cFF888888Counts every " .. PRESET_TEXT[t.options.preset]:lower()
                 .. " you use. Names are matched in English on clients without item groups.|r")

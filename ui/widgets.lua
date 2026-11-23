@@ -572,6 +572,30 @@ function UI.FindOverlaps(root, out, depth)
     return out
 end
 
+--- Text that spills above or below the frame it belongs to (a row that
+-- was measured too short, so its text runs into the next row).
+function UI.FindOverflow(root, out, depth)
+    out = out or {}
+    depth = depth or 0
+    if depth > 12 or not Visible(root) then return out end
+    local _, _, pt, pb = Rect(root)
+    if pt and root:GetObjectType() ~= "ScrollFrame" then
+        for _, region in ipairs({ root:GetRegions() }) do
+            if region:GetObjectType() == "FontString" and Visible(region) and not region.ignoreOverlap then
+                local text = region:GetText()
+                local _, _, t, b = Rect(region)
+                if text and text ~= "" and t and (b < pb - 2 or t > pt + 2) then
+                    out[#out + 1] = Describe(region) .. " spills out of its row"
+                end
+            end
+        end
+    end
+    for _, child in ipairs({ root:GetChildren() }) do
+        if Visible(child) then UI.FindOverflow(child, out, depth + 1) end
+    end
+    return out
+end
+
 --- Visible containers with no width or height that still hold visible
 -- things. The game may not draw the contents of a frame without a size,
 -- so every container gets one.

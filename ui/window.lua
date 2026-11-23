@@ -166,6 +166,7 @@ local function LayoutRow(row, spec, width)
     if spec.type == "section" then
         row.title:SetText(Value(spec.label) or "")
         local d = Value(spec.desc)
+        row.desc:SetWidth(width) -- measure wrapped text against a real width
         row.desc:SetText(d or "")
         row.desc:SetShown(d ~= nil and d ~= "")
         local h = 40
@@ -173,6 +174,7 @@ local function LayoutRow(row, spec, width)
         row:SetHeight(h)
         return h
     elseif spec.type == "text" then
+        row.desc:SetWidth(width - 24) -- measure wrapped text against a real width
         row.desc:SetText(Value(spec.text) or "")
         local h = (row.desc:GetStringHeight() or 14) + 10
         row:SetHeight(h)
@@ -562,12 +564,16 @@ function Settings:CheckLayout()
         for _, issue in ipairs(UI.FindZeroSize(self.frame)) do
             found[#found + 1] = page.label .. ": " .. issue
         end
+        for _, issue in ipairs(UI.FindOverflow(self.frame)) do
+            found[#found + 1] = page.label .. ": " .. issue
+        end
     end
     self:Show(before)
     local queueWindow = WorkoutBuddy.ReminderFrame
     if queueWindow and queueWindow:IsShown() then
         for _, issue in ipairs(UI.FindOverlaps(queueWindow)) do found[#found + 1] = "Workout window: " .. issue end
         for _, issue in ipairs(UI.FindZeroSize(queueWindow)) do found[#found + 1] = "Workout window: " .. issue end
+        for _, issue in ipairs(UI.FindOverflow(queueWindow)) do found[#found + 1] = "Workout window: " .. issue end
     end
     return found
 end

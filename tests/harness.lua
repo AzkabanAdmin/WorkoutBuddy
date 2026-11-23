@@ -157,11 +157,16 @@ local function OwnWidth(o)
     if o._kind == "FontString" and not o._wset then return TextWidth(o) end
     return o._w
 end
-local function OwnHeight(o)
+-- Text height. Like the game, text whose width comes only from its anchors
+-- measures as one line (GetStringHeight), but is drawn wrapped to the
+-- anchored width (its rect), so a row measured that way comes out too short.
+local function WrappedHeight(o, w)
+    if w and w > 0 and o._wrap ~= false then return math.max(1, math.ceil(TextWidth(o) / w)) * LINE_H end
+    return LINE_H
+end
+local function OwnHeight(o, drawnWidth)
     if o._kind == "FontString" and not o._hset then
-        local w = o._wset and o._w or nil
-        if w and w > 0 and o._wrap ~= false then return math.max(1, math.ceil(TextWidth(o) / w)) * LINE_H end
-        return LINE_H
+        return WrappedHeight(o, o._wset and o._w or drawnWidth)
     end
     return o._h
 end
@@ -184,7 +189,7 @@ local function Rect(o)
     end
     resolving[o] = nil
     local w = (L and R) and (R - L) or OwnWidth(o)
-    local h = (T and B) and (T - B) or OwnHeight(o)
+    local h = (T and B) and (T - B) or OwnHeight(o, w)
     local l = L or (R and R - w) or (C and C - w / 2)
     local t = T or (B and B + h) or (M and M + h / 2)
     if not (l and t) then return nil end
@@ -1233,6 +1238,7 @@ check("overlap check measured real layouts", UIK.pairsChecked > 500, UIK.pairsCh
 local function LayoutIssues()
     local list = UIK.FindOverlaps(SUI.frame)
     for _, z in ipairs(UIK.FindZeroSize(SUI.frame)) do list[#list + 1] = z end
+    for _, z in ipairs(UIK.FindOverflow(SUI.frame)) do list[#list + 1] = z end
     return list
 end
 -- like the first click in game: the reused form container starts with no height
@@ -1324,6 +1330,7 @@ check("share recap uses the last fight", (WB.Stats:ShareText("recap") or ""):fin
 for i = 1, 40 do WB.Stats:AddRecord("A Long Exercise Name Number " .. i, i, "reps") end
 local long = WB.Stats:ShareText("today")
 check("share line fits in chat", #long <= 255 and long:find("%.%.%.%)"), #long)
+check("long share preview stays inside its row", Overlaps("long preview") == 0)
 pcall(WB.HandleSlashCommand, WB, "share week guild")
 check("slash share posts", #SENT == 2 and SENT[2].msg:find("this week"))
 pcall(WB.HandleSlashCommand, WB, "share")
@@ -1365,6 +1372,7 @@ RFo.autoclose = false
 local function WindowIssues(label)
     local list = WB.UI.FindOverlaps(RFrame)
     for _, z in ipairs(WB.UI.FindZeroSize(RFrame)) do list[#list + 1] = z end
+    for _, z in ipairs(WB.UI.FindOverflow(RFrame)) do list[#list + 1] = z end
     for i = 1, math.min(#list, 5) do realPrint("  WINDOW " .. label .. ": " .. list[i]) end
     return #list
 end
