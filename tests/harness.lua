@@ -1399,6 +1399,95 @@ local okTitleSpec = SUI.FindSpec("window", "Show the title bar") and SUI.FindSpe
 check("window settings listed", okTitleSpec)
 WB.ReminderQueue:Clear()
 
+----------------------------------------------------------------------------
+-- Timed workouts: stopwatch button and timer window
+local WT = WB.WorkoutTimer
+check("timed: seconds", WB.WorkoutSeconds({ amount = 30, unit = "seconds" }) == 30)
+check("timed: minutes", WB.WorkoutSeconds({ amount = 2, unit = "min" }) == 120)
+check("timed: unit spelling and spaces", WB.WorkoutSeconds({ amount = 20, unit = " Seconds " }) == 20)
+check("timed: reps are not timed", WB.WorkoutSeconds({ amount = 10, unit = "reps" }) == nil)
+check("timed: zero is not timed", WB.WorkoutSeconds({ amount = 0, unit = "seconds" }) == nil)
+local TO = WB.db.profile.timer
+check("timer defaults", TO.enabled and TO.countdown == 3 and TO.log_on_finish and TO.sound == "WB: Chime")
+
+WB.ReminderQueue:Clear()
+WB.ReminderQueue:AddToQueue({ name = "Stand Up & Stretch", amount = 30, unit = "seconds" })
+WB.ReminderQueue:AddToQueue({ name = "Push-ups", amount = 10, unit = "reps" })
+RC:Show()
+RC:UpdateDisplay()
+local tRow, rRow = RFrame.rows[1], RFrame.rows[2]
+check("stopwatch on timed rows only", tRow.btnT:IsShown() and not rRow.btnT:IsShown())
+check("workout window with timer buttons lays out cleanly", WindowIssues("timer buttons") == 0)
+check("name stops before the stopwatch", tRow.label:GetRight() <= tRow.btnT:GetLeft())
+
+local countBefore = WB.Stats:GetTodayCount()
+local soundsBefore = #SOUNDS_PLAYED
+tRow.btnT._scripts.OnClick(tRow.btnT)
+local TF = WorkoutBuddy_TimerFrame
+check("timer opens with a get-ready countdown", TF and TF:IsShown() and TF.status:GetText() == "Get ready..." and TF.number:GetText() == "3")
+local function TimerIssues(label)
+    local list = WB.UI.FindOverlaps(TF)
+    for _, z in ipairs(WB.UI.FindZeroSize(TF)) do list[#list + 1] = z end
+    for _, z in ipairs(WB.UI.FindOverflow(TF)) do list[#list + 1] = z end
+    for i = 1, math.min(#list, 5) do realPrint("  TIMER " .. label .. ": " .. list[i]) end
+    return #list
+end
+check("timer window lays out cleanly", TimerIssues("running") == 0)
+Advance(3.05)
+check("timer starts after the countdown", TF.status:GetText() == "Go!" and TF.number:GetText() == "30", TF.number:GetText())
+Advance(15)
+check("timer counts down", TF.number:GetText() == "15" and TF.bar:GetWidth() > 100, TF.number:GetText())
+check("nothing logged while running", WB.Stats:GetTodayCount() == countBefore and #SOUNDS_PLAYED == soundsBefore)
+Advance(15.1)
+check("time up plays the sound", #SOUNDS_PLAYED == soundsBefore + 1)
+check("time up logs the workout", WB.Stats:GetTodayCount() == countBefore + 1 and RC:IndexOf(tRow.workout or {}) == nil
+    and WB.ReminderState.getQueue()[1].name == "Push-ups")
+check("time up shows done", TF.number:GetText() == "Done" and TF:IsShown())
+check("finished timer lays out cleanly", TimerIssues("finished") == 0)
+Advance(3)
+check("timer closes itself after logging", not TF:IsShown())
+
+-- Cancel logs nothing
+WB.ReminderQueue:AddToQueue({ name = "Look Away From Screen", amount = 20, unit = "seconds" })
+RC:UpdateDisplay()
+local look = WB.ReminderState.getQueue()[2]
+WT:Start(look)
+Advance(5)
+TF.cancel._scripts.OnClick(TF.cancel)
+check("cancel stops and logs nothing", not TF:IsShown() and not WT.running and WB.Stats:GetTodayCount() == countBefore + 1
+    and RC:IndexOf(look) == 2)
+-- Done early logs it
+WT:Start(look)
+Advance(4)
+TF.done._scripts.OnClick(TF.done)
+check("done early logs it", WB.Stats:GetTodayCount() == countBefore + 2 and RC:IndexOf(look) == nil and not WT.running)
+-- Closing the window stops a running timer
+WB.ReminderQueue:AddToQueue({ name = "Plank", amount = 1, unit = "minute" })
+local plank = WB.ReminderState.getQueue()[#WB.ReminderState.getQueue()]
+WT:Start(plank)
+check("minutes timer shows m:ss", (function() Advance(3.1) return TF.number:GetText() == "1:00" end)(), TF.number:GetText())
+TF:Hide()
+Advance(70)
+check("closing the timer stops it", not WT.running and RC:IndexOf(plank) ~= nil)
+-- Only counting, no auto-log
+TO.log_on_finish = false
+WT:Start(plank)
+Advance(64)
+check("count only: time up does not log", RC:IndexOf(plank) ~= nil and TF:IsShown() and TF.done.label:GetText() == "Close")
+TF.done._scripts.OnClick(TF.done)
+check("count only: Close hides it", not TF:IsShown())
+TO.log_on_finish = true
+-- Turning the button off
+TO.enabled = false
+RC:UpdateDisplay()
+check("timer button can be turned off", not RFrame.rows[2].btnT:IsShown())
+TO.enabled = true
+check("timer settings listed", SUI.FindSpec("workouts", "Show the timer button on timed workouts")
+    and SUI.FindSpec("workouts", "Get-ready countdown") and SUI.FindSpec("workouts", "Sound when the time is up")
+    and SUI.FindSpec("workouts", "Log the workout when the time is up"))
+check("pages still clean with timer settings", Overlaps("timer settings") == 0)
+WB.ReminderQueue:Clear()
+
 -- Game detection per client, and live probes that override the table
 local realBuild = GetBuildInfo
 GetBuildInfo = function() return "12.0.5", "1", "Nov 2026", 120005 end

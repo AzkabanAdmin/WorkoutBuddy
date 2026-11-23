@@ -8,8 +8,23 @@ function walk(d) {
     if (fs.statSync(p).isDirectory()) { if (!['.git', 'node_modules', 'tests'].includes(f)) walk(p); }
     else if (f.endsWith('.lua')) {
       n++;
-      try { lp.parse(fs.readFileSync(p, 'utf8'), { luaVersion: '5.1' }); }
+      const src = fs.readFileSync(p, 'utf8');
+      try { lp.parse(src, { luaVersion: '5.1' }); }
       catch (e) { bad++; console.log('SYNTAX', path.relative(root, p), e.message); }
+      // Lua 5.1 silently drops the backslash of an unknown escape ("Interface\Icons"
+      // becomes "InterfaceIcons"), so texture paths break without an error.
+      if (!path.relative(root, p).startsWith('Libs')) {
+        src.split(/\r?\n/).forEach((line, i) => {
+          if (line.trim().startsWith('--')) return;
+          for (let j = 0; j < line.length - 1; j++) {
+            if (line[j] !== '\\') continue;
+            if (!'\\nrtabfv"\'0123456789'.includes(line[j + 1])) {
+              bad++; console.log('ESCAPE', `${path.relative(root, p)}:${i + 1}`, line.trim().slice(0, 80));
+            }
+            j++;
+          }
+        });
+      }
     }
   }
 }

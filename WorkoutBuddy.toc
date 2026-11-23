@@ -29,6 +29,7 @@ item_use.lua
 events.lua
 hydration.lua
 quiet_hours.lua
+workout_timer.lua
 demo.lua
 
 # Reminder frame

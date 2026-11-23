@@ -350,10 +350,16 @@ local function CreateRow(f)
     row.btnP:SetPoint("RIGHT", row.btnD, "LEFT", -3, 0)
     row.btnC = MakeActionButton(row, "Interface\\Buttons\\UI-CheckBox-Check", THEME.btnComplete, "Done! Log it")
     row.btnC:SetPoint("RIGHT", row.btnP, "LEFT", -3, 0)
+    row.btnT = MakeActionButton(row, "Interface\\Icons\\INV_Misc_PocketWatch_01", { 1, 1, 1 }, "Start a timer")
+    row.btnT:SetPoint("RIGHT", row.btnC, "LEFT", -3, 0)
+    row.btnT:SetScript("OnClick", function()
+        local w = Queue()[row.index]
+        if w then WorkoutBuddy.WorkoutTimer:Start(w) end
+    end)
 
     row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     row.label:SetPoint("LEFT", row, "LEFT", 6, 0)
-    row.label:SetPoint("RIGHT", row.btnC, "LEFT", -6, 0)
+    -- right edge set in UpdateDisplay: before the stopwatch on timed rows, else the check
     row.label:SetJustifyH("LEFT")
     row.label:SetWordWrap(false)
 
@@ -403,6 +409,11 @@ function ReminderCore:UpdateDisplay()
             amount = string.format("  %s%s %s|r", THEME.labelAmount, tostring(workout.amount), workout.unit or "")
         end
         row.label:SetText(string.format("%s%s|r%s", THEME.labelName, workout.name or "?", amount))
+        local timed = WorkoutBuddy.db.profile.timer.enabled and WorkoutBuddy.WorkoutSeconds(workout) ~= nil
+        row.btnT:SetShown(timed)
+        row.label:ClearAllPoints()
+        row.label:SetPoint("LEFT", row, "LEFT", 6, 0)
+        row.label:SetPoint("RIGHT", timed and row.btnT or row.btnC, "LEFT", -6, 0)
         row:Show()
     end
     for i = #queue + 1, #f.rows do

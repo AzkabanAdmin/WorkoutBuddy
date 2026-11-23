@@ -15,6 +15,7 @@ Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a s
 - **Workouts at the right moments:** boss kills, level ups, XP bubbles, quest turn-ins, achievements, deaths, zone changes, Mythic+ completions where your game has them, or a play-time break timer.
 - **Set workouts per action:** 3 push-ups per mana potion, 5 burpees per death. Every time counts, repeats add up in one row, and a recap after each boss fight and dungeon or raid shows the totals.
 - **Count any item you use:** pick it from your bags, or just use it and Workout Buddy adds it. Presets cover any potion, healthstone, food or drink, and flasks.
+- **Timers for timed workouts:** press the stopwatch on a stretch or eye break, get a few seconds to get in position, and a sound tells you when the time is up. No counting in your head.
 - **A small queue window** that opens during downtime (flights, dungeon and battleground queues, going AFK) and never in the middle of a fight. Hide the title bar or close button for a minimal look, and let it close itself when you are done.
 - **Hydration reminders** on a daily goal or a fixed interval, in ounces or milliliters, with one-click logging.
 - **Quiet hours:** no workouts after 10 PM? Keep water reminders but silence them? Separate schedules for workouts and hydration, by day of the week, on your local or realm clock.

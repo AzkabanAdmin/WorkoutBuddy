@@ -30,6 +30,7 @@ Running unpackaged shows version "dev" because the TOC holds `@project-version@`
 - **Saved variables:** AceDB copies defaults in once at load. Setting a key to `nil` later does not restore its default; assign the default explicitly. Add upgrades for older saved data to `WorkoutBuddy:MigrateProfile`.
 - **Imports never run code.** Workout lists use the parser in `sharing.lua`; profiles use AceSerializer, and imported Lua conditions stay disabled until reviewed.
 - **UI frames** are created once and reused (see the row pool in `reminder_frame/reminder_core.lua`).
+- **Texture paths and escapes:** Lua 5.1 drops the backslash of an unknown escape (`"Interface\Icons"` becomes `InterfaceIcons`), so write paths with `\`. `tests/check.js` fails on any unknown escape outside `Libs/`.
 - **No overlapping controls, ever.** The test mock resolves anchors and sizes (text at about 6.5 px per character), and `npm test` fails if any two visible controls overlap on any settings page or trigger form state (`UI.FindOverlaps`), or if a visible container has no size (`UI.FindZeroSize`; the game may not draw what is inside a frame without a height), or if text spills out of its row (`UI.FindOverflow`; always `SetWidth` before measuring text with `GetStringHeight`, the game measures anchor-only text as one line). Mock frames start at 0x0 like the game. In game, `/wob uicheck` runs both checks on the real window. Give every control a fixed width, give text an explicit width or wrap, and chain rows of buttons with one anchor each. When adding a page or form state, add it to the overlap tests.
 - **Settings window:** pages are lists of specs in `ui/page_*.lua` and `ui/pages.lua`; `ui/window.lua` builds each row once and re-lays it out. Every spec with a label (or a `search` field) is found by the search. Keep logic out of the UI: trigger rules live in `trigger_list.lua`, imports in `sharing.lua`. Colors come from `UI.THEMES`; paint with `UI.Tex`/`UI.Text` roles so theme changes repaint.
 
@@ -48,7 +49,8 @@ Bundled in `Libs/` (not fetched at package time): Ace3 modules AceAddon, AceCons
 - **Released:** 2.3.0 (tag pushed 2026-11-23): new settings window (own UI kit, side navigation, search, five themes), set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), boss fight and instance recap, manual sharing, per-game content detection, workout window options. Item triggers requested by a user (ordsneakysneaky, 2026-10-09). Tested in game by Tim through the dev link; the last two layout fixes (Share preview height, item form gap) were verified offline only.
 - **Previous:** 2.2.2 (screenshots, footer fix), 2.2.1 (`/wob demo`), 2.2.0 (quiet hours), 2.1.0.
 - **After 2.3.0 is approved on CurseForge (Tim):** re-paste `media/curseforge-description.md` and replace the gallery using `media/gallery.md`.
-- **Tests:** 279 passing (`npm test` in `tests`).
+- **Unreleased (committed locally, not pushed):** 2.4.0, timer for timed workouts (`workout_timer.lua`, stopwatch button on workout window rows). Needs an in-game look before release.
+- **Tests:** 307 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
 ## Open work

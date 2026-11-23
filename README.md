@@ -12,6 +12,7 @@ Works on **WoW Forever**, **Midnight (Retail)** and **Classic Era** from the sam
 - **Custom triggers:** pick any game event, add health or rest-area conditions, or write a short Lua condition.
 - **Set workouts per action:** each potion, healthstone, death or other event can always add a specific workout (3 push-ups per mana potion, 5 burpees per death). Repeats add up, and a recap after each boss fight and instance shows the totals.
 - **Queue window:** mark workouts done, log part of one, or skip it. Opens by itself during downtime (flights, queues, quest turn-ins, going AFK) and never in the middle of combat.
+- **Timers for timed workouts:** a stopwatch button counts you in, times stretches and eye breaks, and plays a sound when the time is up.
 - **Hydration reminders:** goal-based or fixed interval, ounces or milliliters, with one-click logging.
 - **Quiet hours:** pause or silence workouts and hydration at set times of day (for example no workouts after 10 PM), with separate schedules, days of the week, and local or realm time.
 - **Stats:** daily goal, streaks, active days, totals per activity and water, by day, week, month, all time or a custom range.
@@ -52,6 +53,7 @@ Extract the zip so the folder `WorkoutBuddy` sits inside your game's AddOns fold
 | `WorkoutBuddy.lua` | Addon object, saved-variable defaults and migration, client compatibility helpers, suggestions, slash commands |
 | `events.lua` | Built-in workout triggers and the play-time timer |
 | `trigger_manager.lua` | Custom triggers (the only place they are dispatched from) |
+| `workout_timer.lua` | Timer window for timed workouts (get-ready countdown, progress bar, sound, logging) |
 | `item_use.lua` | "I use an item or spell" matching: bag lookup from use-spell to item, presets |
 | `wow_events.lua` | Event catalog and help text for the trigger editor |
 | `stats.lua` | Workout and water history, summaries, goal and streak |

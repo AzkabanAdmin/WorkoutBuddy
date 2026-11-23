@@ -247,6 +247,12 @@ local defaults = {
             defer_combat = true,
             recap = true, -- after a boss fight or leaving an instance: recap and open
         },
+        timer = {
+            enabled = true, -- stopwatch button on timed workouts (seconds, minutes)
+            countdown = 3, -- seconds to get into position before the timer starts
+            sound = "WB: Chime",
+            log_on_finish = true,
+        },
         -- Built-in trigger key -> { name, amount, unit } to always add that
         -- workout instead of a random one (e.g. player_death = 5 Burpees)
         builtin_workouts = {},

@@ -257,6 +257,32 @@ Settings:AddPage({
             listSpec,
             { type = "section", label = "Add your own" },
             addSpec,
+            { type = "section", label = "Timed workouts",
+                desc = "Workouts measured in seconds or minutes get a stopwatch button next to the check mark. It counts you in, times the workout and plays a sound at the end." },
+            { type = "toggle", label = "Show the timer button on timed workouts", keywords = "stopwatch countdown seconds minutes",
+                get = function() return P().timer.enabled end,
+                set = function(v) P().timer.enabled = v and true or false; WorkoutBuddy.ReminderCore:UpdateDisplay() end },
+            { type = "slider", label = "Get-ready countdown", desc = "Time to get into position before the timer starts. 0 starts right away.",
+                keywords = "timer delay prepare", min = 0, max = 10, step = 1, unit = "seconds",
+                disabled = function() return not P().timer.enabled end,
+                get = function() return P().timer.countdown end, set = function(v) P().timer.countdown = v end },
+            { type = "select", label = "Sound when the time is up", keywords = "timer alarm finish audio",
+                disabled = function() return not P().timer.enabled end,
+                values = function()
+                    local list = {}
+                    for name in pairs(WorkoutBuddy.Sounds:GetList()) do list[#list + 1] = name end
+                    table.sort(list, function(a, b) if a == "None" then return true elseif b == "None" then return false end return a < b end)
+                    local values = {}
+                    for _, name in ipairs(list) do values[#values + 1] = { value = name, text = name } end
+                    return values
+                end,
+                get = function() return P().timer.sound or "None" end,
+                set = function(v) P().timer.sound = v; WorkoutBuddy.Sounds:Play(v) end },
+            { type = "toggle", label = "Log the workout when the time is up",
+                desc = "Off: the timer only counts; tick the workout off yourself.", keywords = "timer complete auto",
+                disabled = function() return not P().timer.enabled end,
+                get = function() return P().timer.log_on_finish end,
+                set = function(v) P().timer.log_on_finish = v and true or false end },
             { type = "section", label = "Workout library", desc = "Desk-friendly exercises you can do in a minute or two." },
             librarySpec,
             { type = "section", label = "Reset" },
