@@ -5,6 +5,7 @@
 ### New
 - **Timer for timed workouts.** Workouts measured in seconds or minutes (Look Away From Screen, stretches, planks...) get a stopwatch button next to the check mark. It counts you in ("Get ready... 3, 2, 1"), times the workout with a big countdown and a progress bar, and plays a sound when the time is up. The workout is logged for you, or press Done to finish early. The check mark still works as before.
   - Settings under Workouts > Timed workouts: show the button, the get-ready countdown (0 to 10 seconds), the sound, and whether to log the workout automatically.
+- **Stop water reminders for the day.** New Hydration setting: once you log a daily amount (for example 64 oz), reminders pause and start again tomorrow. The Hydration page shows how much you have had against it.
 - **Show long workout names in full.** New option under Window & look: long names wrap onto up to three lines and the row grows to fit, instead of being shortened with "...".
 
 ## 2.3.0

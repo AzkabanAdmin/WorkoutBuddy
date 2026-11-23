@@ -40,7 +40,9 @@ function Hydration:OnTimer()
     local o = opts()
     if not o.enabled then return end
     local quiet = WorkoutBuddy.QuietHours:Mode("hydration")
-    if quiet ~= "pause" then
+    -- daily goal reached: stay quiet until tomorrow (the schedule keeps
+    -- running, so reminders come back by themselves after midnight)
+    if quiet ~= "pause" and not self:GoalReached() then
         o.last_time = WorkoutBuddy.Now()
         self:ShowPopup(quiet == "silent") -- silent quiet hours: popup without sound
     end
@@ -100,16 +102,37 @@ function Hydration:SetUnit(unit)
     end
     o.total = conv(o.total)
     o.per = conv(o.per)
+    if (tonumber(o.stop_after) or 0) > 0 then o.stop_after = conv(o.stop_after) end
     o.unit = unit
+end
+
+--- The daily amount after which reminders stop for the day (0 = never).
+function Hydration:DailyGoal()
+    local n = tonumber(opts().stop_after) or 0
+    return n > 0 and n or nil
+end
+
+--- True once today's logged water reaches the daily goal.
+function Hydration:GoalReached()
+    local goal = self:DailyGoal()
+    if not goal then return false end
+    return (WorkoutBuddy.Stats:GetTodayWater()) >= goal
 end
 
 function Hydration:LogDrink(amount)
     local o = opts()
     amount = amount or (o.mode == "interval" and 0 or o.per) or 0
     if amount <= 0 then amount = (o.unit == "ml") and 250 or 8 end
+    local wasReached = self:GoalReached()
     WorkoutBuddy.Stats:AddWater(amount, self:UnitLabel())
     local total, unit = WorkoutBuddy.Stats:GetTodayWater()
-    WorkoutBuddy:Print(string.format("|cFF66BBFFLogged %d %s of water.|r Today: %d %s", amount, self:UnitLabel(), total, unit or ""))
+    local goal = self:DailyGoal()
+    WorkoutBuddy:Print(string.format("|cFF66BBFFLogged %d %s of water.|r Today: %d%s %s", amount, self:UnitLabel(), total,
+        goal and (" / " .. goal) or "", unit or ""))
+    if goal and not wasReached and self:GoalReached() then
+        WorkoutBuddy:Print("|cFF00FF00Daily water goal reached!|r Reminders pause until tomorrow.")
+        if self.frame then self.frame:Hide() end
+    end
 end
 
 ------------------------------------------------------------------------

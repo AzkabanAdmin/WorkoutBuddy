@@ -35,12 +35,18 @@ local function Restart() WorkoutBuddy.Hydration:Start() end
 local function NextReminderText()
     local o = H()
     if not o.enabled then return "|cFF888888Hydration reminders are off.|r" end
-    local mins = math.floor(WorkoutBuddy.Hydration:GetInterval() / 60 + 0.5)
+    local Hyd = WorkoutBuddy.Hydration
+    local total, unit = WorkoutBuddy.Stats:GetTodayWater()
+    local goal = Hyd:DailyGoal()
+    local today = string.format("Logged today: |cFF66BBFF%d%s %s|r", total, goal and (" / " .. goal) or "", unit or Hyd:UnitLabel())
+    if Hyd:GoalReached() then
+        return "|cFF00FF00Daily goal reached.|r Reminders pause until tomorrow.\n" .. today
+    end
+    local mins = math.floor(Hyd:GetInterval() / 60 + 0.5)
     local text = string.format("You will be reminded about every |cFFFFD700%d minute(s)|r.", mins)
     local left = (tonumber(o.next_time) or 0) - WorkoutBuddy.Now()
     if left > 0 then text = text .. string.format(" Next reminder in about %d minute(s).", math.ceil(left / 60)) end
-    local total, unit = WorkoutBuddy.Stats:GetTodayWater()
-    if total > 0 then text = text .. string.format("\nLogged today: |cFF66BBFF%d %s|r", total, unit or "") end
+    if total > 0 or goal then text = text .. "\n" .. today end
     return text
 end
 
@@ -87,6 +93,15 @@ Settings:AddPage({
             { type = "slider", label = "Remind me every", hidden = Smart,
                 min = 5, max = 240, step = 5, unit = "min",
                 get = function() return H().interval or 60 end, set = function(v) H().interval = v; Restart() end },
+            { type = "input", label = function() return "Stop for the day after (" .. unitLabel() .. ")" end,
+                desc = "Reminders pause once you log this much water today and start again tomorrow. 0 keeps reminding all day.",
+                keywords = "daily goal water limit stop pause enough", width = 90,
+                validate = function(text)
+                    local n = tonumber(text)
+                    if not n or n < 0 then return "Enter 0 or more." end
+                end,
+                get = function() return H().stop_after or 0 end,
+                set = function(v) H().stop_after = tonumber(v) or 0 end },
             { type = "select", label = "Sound", keywords = "audio alert",
                 values = SoundValues, get = function() return H().sound or "Alarm Clock" end,
                 set = function(v) H().sound = v; WorkoutBuddy.Sounds:Play(v) end },

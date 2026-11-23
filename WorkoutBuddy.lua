@@ -218,6 +218,7 @@ local defaults = {
             scale = 1.2,
             alpha = 0.95,
             bg_alpha = 0.94, -- background only; alpha fades everything
+            stop_after = 0, -- daily amount after which reminders stop until tomorrow (0 = never)
             auto_hide = 0,
             next_time = 0,
             last_time = 0,
@@ -352,6 +353,8 @@ function WorkoutBuddy:MigrateProfile()
     local h = p.hydration
     if h.x == 0 and h.y == 0 then h.x, h.y = nil, nil end -- v1 default put the popup in a corner
     h.initialized = nil
+    local stopAfter = tonumber(h.stop_after)
+    h.stop_after = (stopAfter and stopAfter >= 0) and stopAfter or 0
     for _, key in ipairs({ "total", "per", "timeframe", "interval" }) do
         local n = tonumber(h[key])
         h[key] = (n and n > 0) and n or defaults.profile.hydration[key] -- invalid values fall back to defaults

@@ -17,7 +17,7 @@ Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a s
 - **Count any item you use:** pick it from your bags, or just use it and Workout Buddy adds it. Presets cover any potion, healthstone, food or drink, and flasks.
 - **Timers for timed workouts:** press the stopwatch on a stretch or eye break, get a few seconds to get in position, and a sound tells you when the time is up. No counting in your head.
 - **A small queue window** that opens during downtime (flights, dungeon and battleground queues, going AFK) and never in the middle of a fight. Hide the title bar or close button for a minimal look, and let it close itself when you are done.
-- **Hydration reminders** on a daily goal or a fixed interval, in ounces or milliliters, with one-click logging.
+- **Hydration reminders** on a daily goal or a fixed interval, in ounces or milliliters, with one-click logging. Set a daily amount and reminders stop once you reach it, until tomorrow.
 - **Quiet hours:** no workouts after 10 PM? Keep water reminders but silence them? Separate schedules for workouts and hydration, by day of the week, on your local or realm clock.
 - **Stats:** daily goal, streaks, active days and totals by day, week, month or all time. Share a one-line summary with your party or guild when you choose to; Workout Buddy never posts on its own.
 - **A settings window that is easy to find your way around:** pages on the left, a search box for every setting, and five color themes.

@@ -1516,6 +1516,46 @@ check("back to shortened", RFrame.rows[1]:GetHeight() == 28 and WindowIssues("ba
 check("pages still clean with wrap option", Overlaps("wrap option") == 0)
 WB.ReminderQueue:Clear()
 
+----------------------------------------------------------------------------
+-- Hydration: stop for the day after a daily amount
+local HY, HO = WB.Hydration, WB.db.profile.hydration
+check("daily stop off by default", HO.stop_after == 0 and not HY:GoalReached())
+at(FRI, 15)
+HO.enabled, HO.unit, HO.stop_after = true, "oz", 16
+WB.Stats:Reset()
+HY:LogDrink(8)
+check("below the daily amount: not reached", not HY:GoalReached())
+WorkoutBuddy_HydrationFrame:Hide()
+HY:OnTimer()
+check("below the daily amount: still reminds", WorkoutBuddy_HydrationFrame:IsShown())
+WorkoutBuddy_HydrationFrame:Hide()
+HY:LogDrink(8)
+check("reaching it says so once", chatHas("Daily water goal reached") and HY:GoalReached())
+HY:OnTimer()
+check("after reaching it: no reminder", not WorkoutBuddy_HydrationFrame:IsShown())
+check("after reaching it: schedule keeps running for tomorrow", HY.timer ~= nil)
+SUI:Show("hydration")
+local hydStatus = SUI:Specs(SUI.pages.hydration)[3].text()
+check("status shows the goal and the pause", hydStatus:find("Daily goal reached") and hydStatus:find("16 / 16"), hydStatus)
+check("hydration page lays out cleanly", Overlaps("hydration daily") == 0)
+at(SAT, 9)
+check("next day: not reached any more", not HY:GoalReached())
+HY:OnTimer()
+check("next day: reminders are back", WorkoutBuddy_HydrationFrame:IsShown())
+WorkoutBuddy_HydrationFrame:Hide()
+HY:SetUnit("ml")
+check("daily amount converts to ml", HO.stop_after == 470, HO.stop_after)
+HY:SetUnit("oz")
+check("and back to oz", HO.stop_after == 16, HO.stop_after)
+local stopSpec = SUI.FindSpec("hydration", "Stop for the day after (oz)")
+check("setting listed with the unit", stopSpec ~= nil)
+check("setting refuses bad input", stopSpec.validate("abc") and stopSpec.validate("-5") and not stopSpec.validate("64"))
+HO.stop_after = 0
+at(FRI, 15)
+check("0 never stops", not HY:GoalReached())
+HO.enabled = false
+HY:Stop()
+
 -- Game detection per client, and live probes that override the table
 local realBuild = GetBuildInfo
 GetBuildInfo = function() return "12.0.5", "1", "Nov 2026", 120005 end
