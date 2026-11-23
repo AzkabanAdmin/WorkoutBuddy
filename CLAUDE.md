@@ -45,9 +45,9 @@ Bundled in `Libs/` (not fetched at package time): Ace3 modules AceAddon, AceCons
 
 ## Status
 
-- **Released:** 2.2.2 (tag pushed 2026-11-22): window footer and height fix, page screenshots. First release meant for the public page.
-- **Previous:** 2.2.1 (`/wob demo`), 2.2.0 (quiet hours; tested in game by Tim), 2.1.0.
-- **Unreleased (committed locally, not pushed):** 2.3.0: new settings window (own UI kit, side navigation, search, themes), set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), and the boss fight and instance recap. Item triggers requested by a user (ordsneakysneaky, 2026-10-09). Tim is testing it in game through the dev link (CurseForge copy backed up at `_forever_\Interface\WorkoutBuddy-curseforge-backup`; restore it after release).
+- **Released:** 2.3.0 (tag pushed 2026-11-23): new settings window (own UI kit, side navigation, search, five themes), set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), boss fight and instance recap, manual sharing, per-game content detection, workout window options. Item triggers requested by a user (ordsneakysneaky, 2026-10-09). Tested in game by Tim through the dev link; the last two layout fixes (Share preview height, item form gap) were verified offline only.
+- **Previous:** 2.2.2 (screenshots, footer fix), 2.2.1 (`/wob demo`), 2.2.0 (quiet hours), 2.1.0.
+- **After 2.3.0 is approved on CurseForge (Tim):** re-paste `media/curseforge-description.md` and replace the gallery using `media/gallery.md`.
 - **Tests:** 279 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
@@ -63,7 +63,7 @@ Bundled in `Libs/` (not fetched at package time): Ace3 modules AceAddon, AceCons
 
 ## Change log
 
-- 2026-11-22: 2.3.0 built: set workouts per action, item and spell triggers, boss fight and instance recap.
+- 2026-11-23: 2.3.0 released. Built 2026-11-22: set workouts per action, item and spell triggers, boss fight and instance recap.
 - 2026-11-22: 2.2.2 with CurseForge screenshots and GIF; footer and window height fix.
 - 2026-11-22: `/wob demo` screenshot mode, `scripts/media.py`, CurseForge description in `media/`.
 - 2026-11-22: Review on a second machine; quiet hours feature; fixes for partial logging, target health triggers, mixed water units, nested profile import checks, imported trigger safety and Reset size. Removed merged `codex/*` branches.
