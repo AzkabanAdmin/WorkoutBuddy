@@ -1488,6 +1488,34 @@ check("timer settings listed", SUI.FindSpec("workouts", "Show the timer button o
 check("pages still clean with timer settings", Overlaps("timer settings") == 0)
 WB.ReminderQueue:Clear()
 
+----------------------------------------------------------------------------
+-- Long workout names: shortened (default) or wrapped onto more lines
+check("wrap default off", WB.db.profile.reminder_frame.wrap_names == false)
+WB.ReminderQueue:Clear()
+WB.ReminderQueue:AddToQueue({ name = "Look Away From Screen And Focus On Something Far Away", amount = 20, unit = "seconds" })
+WB.ReminderQueue:AddToQueue({ name = "Seated Spinal Twist With A Long Deep Breath Each Side", amount = 5, unit = "reps" })
+WB.ReminderQueue:AddToQueue({ name = "Push-ups", amount = 15, unit = "reps" })
+RC:Show()
+RC:UpdateDisplay()
+local r1, r2, r3 = RFrame.rows[1], RFrame.rows[2], RFrame.rows[3]
+check("shortened: every row is one line high", r1:GetHeight() == 28 and r2:GetHeight() == 28 and r3:GetHeight() == 28)
+check("shortened rows lay out cleanly", WindowIssues("shortened") == 0)
+local wrapSpec = SUI.FindSpec("window", "Show long workout names in full")
+wrapSpec.set(true)
+check("wrapped: long rows grow", r1:GetHeight() > 28 and r2:GetHeight() > 28, r1:GetHeight() .. "/" .. r2:GetHeight())
+check("wrapped: short rows stay one line", r3:GetHeight() == 28, r3:GetHeight())
+check("wrapped: rows stack without gaps or overlap", math.abs(r2:GetTop() - r1:GetBottom()) < 0.5 and math.abs(r3:GetTop() - r2:GetBottom()) < 0.5)
+check("wrapped: name stops before the stopwatch", r1.label:GetRight() <= r1.btnT:GetLeft() and r2.label:GetRight() <= r2.btnC:GetLeft())
+check("wrapped rows lay out cleanly", WindowIssues("wrapped") == 0)
+check("wrapped: list scrolls the full height", RFrame.content:GetHeight() == r1:GetHeight() + r2:GetHeight() + r3:GetHeight())
+RC:Complete(1)
+check("wrapped: rows reflow after completing one", math.abs(RFrame.rows[1]:GetTop() - RFrame.content:GetTop()) < 0.5
+    and RFrame.rows[1]:GetHeight() > 28 and WindowIssues("after complete") == 0)
+wrapSpec.set(false)
+check("back to shortened", RFrame.rows[1]:GetHeight() == 28 and WindowIssues("back") == 0)
+check("pages still clean with wrap option", Overlaps("wrap option") == 0)
+WB.ReminderQueue:Clear()
+
 -- Game detection per client, and live probes that override the table
 local realBuild = GetBuildInfo
 GetBuildInfo = function() return "12.0.5", "1", "Nov 2026", 120005 end

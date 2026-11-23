@@ -304,7 +304,7 @@ function ReminderCore:CreateFrame()
         ReminderCore:UpdateDisplay()
     end)
 
-    f:SetScript("OnSizeChanged", function() ReminderCore:LayoutRows() end)
+    f:SetScript("OnSizeChanged", function() ReminderCore:UpdateDisplay() end) -- wrapped rows depend on width
     f:SetScript("OnDragStart", function(frame)
         if not Opts().locked then frame:StartMoving() end
     end)
@@ -380,25 +380,35 @@ end
 
 function ReminderCore:LayoutRows()
     local f = self.frame
-    if not f then return end
+    if not f then return 0 end
     local w = math.max(MIN_W - 16, (f.scroll:GetWidth() or MIN_W) - 2)
     f.content:SetWidth(w)
     for _, row in ipairs(f.rows) do row:SetWidth(w) end
+    return w
 end
+
+-- Buttons on the right of a row: dismiss, partial, check (22 px each, 3 px
+-- apart, 4 px from the edge), plus the stopwatch on timed workouts.
+local BUTTONS_W = 4 + 22 + 3 + 22 + 3 + 22
+local TIMER_W = 3 + 22
+local MAX_LINES = 3
 
 function ReminderCore:UpdateDisplay()
     local f = self.frame
     if not f then return end
     local queue = Queue()
+    local width = self:LayoutRows()
+    local wrap = Opts().wrap_names and true or false
 
+    local y = 0
     for i, workout in ipairs(queue) do
         local row = f.rows[i]
         if not row then
             row = CreateRow(f)
-            row:SetPoint("TOPLEFT", f.content, "TOPLEFT", 0, -(i - 1) * ROW_H)
             f.rows[i] = row
         end
         row.index = i
+        row:SetWidth(width)
         local base = (i % 2 == 0) and THEME.rowEven or THEME.rowOdd
         local k = self.rowAlpha or 1
         row.baseColor = { base[1], base[2], base[3], base[4] * k }
@@ -408,20 +418,37 @@ function ReminderCore:UpdateDisplay()
         if tonumber(workout.amount) and tonumber(workout.amount) > 0 then
             amount = string.format("  %s%s %s|r", THEME.labelAmount, tostring(workout.amount), workout.unit or "")
         end
-        row.label:SetText(string.format("%s%s|r%s", THEME.labelName, workout.name or "?", amount))
         local timed = WorkoutBuddy.db.profile.timer.enabled and WorkoutBuddy.WorkoutSeconds(workout) ~= nil
         row.btnT:SetShown(timed)
         row.label:ClearAllPoints()
         row.label:SetPoint("LEFT", row, "LEFT", 6, 0)
-        row.label:SetPoint("RIGHT", timed and row.btnT or row.btnC, "LEFT", -6, 0)
+        local h = ROW_H
+        if wrap then
+            -- Full names: a fixed width (so the height can be measured), up
+            -- to three lines, and the row grows to fit.
+            local labelW = width - 6 - 6 - BUTTONS_W - (timed and TIMER_W or 0)
+            row.label:SetWidth(labelW)
+            row.label:SetWordWrap(true)
+            if row.label.SetMaxLines then row.label:SetMaxLines(MAX_LINES) end
+            row.label:SetText(string.format("%s%s|r%s", THEME.labelName, workout.name or "?", amount))
+            h = math.max(ROW_H, math.ceil(row.label:GetStringHeight() or 0) + 12)
+        else
+            row.label:SetPoint("RIGHT", timed and row.btnT or row.btnC, "LEFT", -6, 0)
+            row.label:SetWordWrap(false)
+            if row.label.SetMaxLines then row.label:SetMaxLines(1) end
+            row.label:SetText(string.format("%s%s|r%s", THEME.labelName, workout.name or "?", amount))
+        end
+        row:SetHeight(h)
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", f.content, "TOPLEFT", 0, -y)
         row:Show()
+        y = y + h
     end
     for i = #queue + 1, #f.rows do
         f.rows[i]:Hide()
     end
 
-    f.content:SetHeight(math.max(ROW_H, #queue * ROW_H))
-    self:LayoutRows()
+    f.content:SetHeight(math.max(ROW_H, y))
     f.emptyLabel:SetShown(#queue == 0)
     f.progress:SetText(WorkoutBuddy.Stats:GetShortLine())
 

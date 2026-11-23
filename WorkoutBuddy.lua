@@ -233,6 +233,7 @@ local defaults = {
             show_header = true, -- title bar: icon, name, settings gear
             show_close = true,
             autoclose = false, -- close once every workout is done
+            wrap_names = false, -- true: long names wrap onto more lines instead of "..."
             initialized = false,
         },
         reminder_events = {
