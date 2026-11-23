@@ -42,9 +42,8 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 
 ## Status
 
-- **Released:** 2.2.0 (tag pushed 2026-11-22): quiet hours and the review fixes listed in `CHANGELOG.md`. In-game testing pending.
-- **Previous:** 2.1.0 (2026-11-22).
-- **Unreleased on `main`:** 2.2.1, adds `/wob demo` screenshot mode.
+- **Released:** 2.2.1 (tag pushed 2026-11-22): `/wob demo` screenshot mode.
+- **Previous:** 2.2.0 (quiet hours and review fixes; tested in game by Tim), 2.1.0.
 - **Tests:** 146 passing (`npm test` in `tests`).
 
 ## Open work
