@@ -355,6 +355,13 @@ end
 ------------------------------------------------------------------------
 -- Actions
 ------------------------------------------------------------------------
+function ReminderCore:IndexOf(workout)
+    for i, w in ipairs(Queue()) do
+        if w == workout then return i end
+    end
+    return nil
+end
+
 function ReminderCore:Complete(idx)
     local w = Queue()[idx]
     if not w then return end
@@ -412,8 +419,11 @@ function ReminderCore:ShowPartialInput(idx)
         box.edit:SetNumeric(true)
         box.edit:SetMaxLetters(5)
 
+        -- Look the workout up again on commit: rows above it may have been
+        -- removed while the box was open, which shifts its row number.
         local function commit()
-            ReminderCore:CommitPartial(box.index, box.edit:GetText())
+            local row = ReminderCore:IndexOf(box.workout)
+            if row then ReminderCore:CommitPartial(row, box.edit:GetText()) end
             box:Hide()
         end
         box.edit:SetScript("OnEnterPressed", commit)
@@ -432,7 +442,7 @@ function ReminderCore:ShowPartialInput(idx)
         cancel:SetScript("OnClick", function() box:Hide() end)
     end
 
-    box.index = idx
+    box.workout = w
     box.label:SetText(string.format("|cFFFFD700How many %s did you do?|r",
         (w.unit and w.unit ~= "") and w.unit or "of " .. (w.name or "it")))
     box:ClearAllPoints()

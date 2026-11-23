@@ -68,12 +68,21 @@ function TriggerManager:Init()
     self:RegisterEvents()
 end
 
+-- Health triggers on these units are re-checked when the unit changes, so a
+-- new target that is already below the threshold fires right away.
+local UNIT_CHANGE_EVENTS = { PLAYER_TARGET_CHANGED = "target", PLAYER_FOCUS_CHANGED = "focus" }
+
 function TriggerManager:RegisterEvents()
     if not self.frame then return end
     self.frame:UnregisterAllEvents()
     for _, t in ipairs(Triggers()) do
         local evt = TriggerEvent(t)
         t._lastPass = nil
+        if t.enabled ~= false and t.event == "UNIT_HEALTH" then
+            for changeEvent, unit in pairs(UNIT_CHANGE_EVENTS) do
+                if t.options.unit == unit then WorkoutBuddy.SafeRegisterEvent(self.frame, changeEvent) end
+            end
+        end
         if t.enabled ~= false and evt and evt ~= "" then
             if not WorkoutBuddy.SafeRegisterEvent(self.frame, evt) then
                 self:WarnOnce("badevent:" .. evt, string.format(
@@ -126,6 +135,15 @@ function TriggerManager:Compile(code, name)
 end
 
 function TriggerManager:HandleEvent(event, ...)
+    local changedUnit = UNIT_CHANGE_EVENTS[event]
+    if changedUnit then
+        for _, t in ipairs(Triggers()) do
+            if t.enabled ~= false and t.event == "UNIT_HEALTH" and t.options.unit == changedUnit then
+                t._lastPass = nil -- a different unit: start the edge detection over
+                self:Evaluate(t, "UNIT_HEALTH", changedUnit)
+            end
+        end
+    end
     for _, t in ipairs(Triggers()) do
         if t.enabled ~= false and TriggerEvent(t) == event then
             self:Evaluate(t, event, ...)
@@ -145,7 +163,11 @@ function TriggerManager:Evaluate(t, event, ...)
         pass = (IsResting() and true or false) == (t.options.state == "resting")
     end
 
-    if pass and t.custom and t.custom ~= "" and not t.imported then
+    -- Imported code is never run, and the trigger never fires without its
+    -- condition, until the player reviews and saves it.
+    if t.imported and t.custom and t.custom ~= "" then return end
+
+    if pass and t.custom and t.custom ~= "" then
         local f = self:Compile(t.custom, t.name)
         if not f then return end
         local ok, res = pcall(f, ...)

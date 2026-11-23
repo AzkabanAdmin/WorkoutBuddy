@@ -1,5 +1,23 @@
 # Workout Buddy
 
+## 2.2.0
+
+### New
+- **Quiet hours.** Turn workouts and hydration reminders off, or down, at set times of day. For example: no workouts after 10 PM, but keep water reminders. Find it in the new Quiet Hours tab.
+  - Workouts and hydration each have their own schedule, days of the week and behavior.
+  - Workouts can be paused (skipped) or collected silently (queued with no chat line, sound or popup). The workout window never opens by itself during quiet hours.
+  - Hydration reminders can be paused or shown without a sound.
+  - Follow your computer's clock or the realm clock. Windows can run past midnight, and the same start and end time keeps a whole day quiet.
+  - `/wob now` and `/wob water` always work. `/wob quiet` shows what is quiet right now, and the minimap tooltip shows it too.
+
+### Fixed
+- Logging part of a workout could record it against the wrong workout if a row above it was removed while the box was open.
+- A health trigger on your target or focus now fires as soon as you pick a new target that is already below the threshold.
+- Water totals no longer add ounces and milliliters together after switching units on the same day.
+- Profile imports now check every setting's type, so a hand-edited profile cannot break the windows.
+- An imported trigger with Lua code can no longer fire before it is reviewed.
+- "Reset size" restores the window's default size.
+
 ## 2.1.0
 
 ### New

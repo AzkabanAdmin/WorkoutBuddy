@@ -97,8 +97,8 @@ end
 
 ------------------------------------------------------------------------
 -- Play-time break timer: suggest a workout after N minutes of active play
--- without one. Minutes spent AFK or in a loading screen do not count, and
--- any suggestion or completed workout restarts the count.
+-- without one. Minutes spent AFK, in a loading screen or in paused quiet
+-- hours do not count, and any suggestion or completed workout restarts the count.
 ------------------------------------------------------------------------
 function WorkoutBuddy:StartPlayTimer()
     if self.playTicker then
@@ -115,6 +115,7 @@ function WorkoutBuddy:OnPlayMinute()
     local p = self.db.profile
     if not (p.enabled and p.event_map.play_timer) then return end
     if UnitIsAFK("player") then return end
+    if self.QuietHours:Mode("workouts") == "pause" then return end -- paused time does not count
     self.playMinutes = (self.playMinutes or 0) + 1
     local target = tonumber(p.play_timer_minutes) or 45
     if self.playMinutes >= target and not self.InCombat() then

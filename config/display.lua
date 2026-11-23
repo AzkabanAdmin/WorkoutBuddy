@@ -36,7 +36,8 @@ function WorkoutBuddy.ConfigTabs.Display()
                 name = "Reset size",
                 order = 4,
                 func = function()
-                    RF().width, RF().height = nil, nil
+                    local d = WorkoutBuddy.defaults.profile.reminder_frame
+                    RF().width, RF().height = d.width, d.height
                     WorkoutBuddy.ReminderCore:ApplyOptions()
                 end,
             },

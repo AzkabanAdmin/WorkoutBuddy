@@ -22,6 +22,7 @@ function WorkoutBuddy:InitConfig()
             general      = Tabs.General(),
             workouts     = Tabs.Workouts(),
             hydration    = Tabs.Hydration(),
+            quiethours   = Tabs.QuietHours(),
             display      = Tabs.Display(),
             stats        = Tabs.Stats(),
             importexport = Tabs.ImportExport(),

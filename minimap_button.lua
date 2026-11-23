@@ -30,6 +30,10 @@ local dataObject = LibStub("LibDataBroker-1.1"):NewDataObject(NAME, {
         if not WorkoutBuddy.db.profile.enabled then
             tooltip:AddLine("Automatic suggestions are paused (/wob resume)", 1, 0.4, 0.4, true)
         end
+        local QH = WorkoutBuddy.QuietHours
+        for _, kind in ipairs(QH.KINDS) do
+            if QH:IsQuiet(kind) then tooltip:AddLine(QH:StatusLine(kind), 1, 0.53, 0, true) end
+        end
         tooltip:AddLine(" ")
         tooltip:AddLine("|cFFFFFF00Left-Click:|r Show or hide the workout queue")
         tooltip:AddLine("|cFFFFFF00Shift-Click:|r Workout now")

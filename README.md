@@ -10,6 +10,7 @@ Works on **WoW Forever**, **Midnight (Retail)** and **Classic Era** from the sam
 - **Custom triggers:** pick any game event, add health or rest-area conditions, or write a short Lua condition.
 - **Queue window:** mark workouts done, log part of one, or skip it. Opens by itself during downtime (flights, queues, quest turn-ins, going AFK) and never in the middle of combat.
 - **Hydration reminders:** goal-based or fixed interval, ounces or milliliters, with one-click logging.
+- **Quiet hours:** pause or silence workouts and hydration at set times of day (for example no workouts after 10 PM), with separate schedules, days of the week, and local or realm time.
 - **Stats:** daily goal, streaks, active days, totals per activity and water, by day, week, month, all time or a custom range.
 - **Workout library:** desk-friendly cardio, stretching, posture, strength, eye and breathing exercises, and healthy habits.
 - **Profiles and sharing:** per-character or shared profiles, plus import and export of workout lists and whole profiles.
@@ -24,6 +25,7 @@ Works on **WoW Forever**, **Midnight (Retail)** and **Classic Era** from the sam
 | `/wob water` | Log a drink of water |
 | `/wob stats` | Print today's progress |
 | `/wob pause`, `/wob resume` | Pause or resume automatic suggestions |
+| `/wob quiet` | Show quiet hours status |
 | `/wob center` | Move the windows back to the middle of the screen |
 | `/wob minimap` | Show or hide the minimap button |
 
@@ -49,6 +51,7 @@ Extract the zip so the folder `WorkoutBuddy` sits inside your game's AddOns fold
 | `wow_events.lua` | Event catalog and help text for the trigger editor |
 | `stats.lua` | Workout and water history, summaries, goal and streak |
 | `hydration.lua` | Hydration timer and popup |
+| `quiet_hours.lua` | Quiet hours schedules (local or realm clock) |
 | `Sounds.lua` | Sound registration through LibSharedMedia |
 | `reminder_frame/` | Queue window: state, queue, auto-open events, UI |
 | `config.lua`, `config/` | Options tabs (AceConfig) and the trigger editor |

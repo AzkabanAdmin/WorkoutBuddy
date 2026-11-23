@@ -23,6 +23,23 @@ local function isWater(r)
     return r.kind == "water"
 end
 
+local ML_PER_OZ = 29.5735
+
+--- The unit water totals are shown in (the hydration setting).
+local function waterUnit()
+    local p = profile()
+    return (p and p.hydration and p.hydration.unit == "ml") and "ml" or "oz"
+end
+
+--- A water record's amount in the given unit, so switching units midday
+-- does not add ounces and milliliters together.
+local function waterAmount(r, unit)
+    local amount = r.amount or 0
+    local from = (r.unit == "ml") and "ml" or "oz"
+    if from == unit then return amount end
+    return (unit == "ml") and amount * ML_PER_OZ or amount / ML_PER_OZ
+end
+
 --- Log a workout (full or partial).
 function Stats:AddRecord(name, amount, unit, partial)
     if not profile() then return end
@@ -112,17 +129,14 @@ end
 
 function Stats:GetTodayWater()
     local start = WorkoutBuddy.DayStart()
-    local total, unit = 0, nil
+    local total, unit = 0, waterUnit()
     local recs = self:GetRecords()
     for i = #recs, 1, -1 do
         local r = recs[i]
         if (r.timestamp or 0) < start then break end
-        if isWater(r) then
-            total = total + (r.amount or 0)
-            unit = unit or r.unit
-        end
+        if isWater(r) then total = total + waterAmount(r, unit) end
     end
-    return total, unit
+    return math.floor(total + 0.5), unit
 end
 
 --- Consecutive days (ending today, or yesterday if nothing logged yet today)
@@ -163,15 +177,15 @@ function Stats:GetSummary(timeframe)
         return "|cFFFF5555Could not read that range.|r Try something like 3days, 2weeks or 90minutes."
     end
 
-    local total, partials, water, waterUnit = 0, 0, 0, nil
+    local total, partials, water = 0, 0, 0
+    local wUnit = waterUnit()
     local byActivity, order = {}, {}
     local activeDays = {}
 
     for _, r in ipairs(self:GetRecords()) do
         if not start or (r.timestamp or 0) >= start then
             if isWater(r) then
-                water = water + (r.amount or 0)
-                waterUnit = waterUnit or r.unit
+                water = water + waterAmount(r, wUnit)
             else
                 total = total + 1
                 if r.partial then partials = partials + 1 end
@@ -204,7 +218,7 @@ function Stats:GetSummary(timeframe)
         string.format("|cFFFFD700Active days:|r %d", days),
     }
     if water > 0 then
-        lines[#lines + 1] = string.format("|cFF66BBFFWater:|r %d %s", water, waterUnit or "")
+        lines[#lines + 1] = string.format("|cFF66BBFFWater:|r %d %s", math.floor(water + 0.5), wUnit)
     end
     if #order > 0 then
         lines[#lines + 1] = " "

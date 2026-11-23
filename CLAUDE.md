@@ -40,6 +40,22 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 - Add user-facing changes to `CHANGELOG.md` (it becomes the CurseForge changelog).
 - After a game patch, update the `## Interface` line in `WorkoutBuddy.toc`. Check a client's value in game with `/dump select(4, GetBuildInfo())`.
 
+## Status
+
+- **Released:** 2.1.0 (tag pushed 2026-11-22).
+- **Next release:** 2.2.0, committed on `main` and not tagged yet. Adds quiet hours and the review fixes listed in `CHANGELOG.md`. Test quiet hours in game (Quiet Hours tab, `/wob quiet`), then push the tag.
+- **Tests:** 127 passing (`npm test` in `tests`).
+
+## Open work
+
+- In-game check of quiet hours on each client, especially the realm clock (`C_DateAndTime.GetCurrentCalendarTime`, falling back to `GetGameTime`) on Classic Era and Forever.
+- Ideas not started: a "snooze for 1 hour" button, and quiet hours that follow instance or combat state instead of the clock.
+
+## Change log
+
+- 2026-11-22: Review on a second machine; quiet hours feature; fixes for partial logging, target health triggers, mixed water units, nested profile import checks, imported trigger safety and Reset size. Removed merged `codex/*` branches.
+- 2026-11-22: 2.1.0 released (WoW Forever support, packaging, tests).
+
 ## Releasing
 
 Push to `main`, then push a tag (`2.1.1`, `2.1.1-beta1`, `2.1.1-alpha1`). CurseForge's automatic packager builds the file from the tag using `.pkgmeta`. To build a zip locally instead, run `python scripts/build_zip.py 2.1.1`.

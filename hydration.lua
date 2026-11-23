@@ -39,8 +39,11 @@ function Hydration:OnTimer()
     self.timer = nil
     local o = opts()
     if not o.enabled then return end
-    o.last_time = WorkoutBuddy.Now()
-    self:ShowPopup(false)
+    local quiet = WorkoutBuddy.QuietHours:Mode("hydration")
+    if quiet ~= "pause" then
+        o.last_time = WorkoutBuddy.Now()
+        self:ShowPopup(quiet == "silent") -- silent quiet hours: popup without sound
+    end
     self:Schedule(self:GetInterval())
 end
 
@@ -219,8 +222,8 @@ function Hydration:CenterFrame(save)
     self:ApplyOptions()
 end
 
---- Show the popup. `test` skips the sound (used by the settings preview).
-function Hydration:ShowPopup(test)
+--- Show the popup. `silent` skips the sound (settings preview, silent quiet hours).
+function Hydration:ShowPopup(silent)
     local f = self:CreateFrame()
     self:ApplyOptions()
     local o = opts()
@@ -232,7 +235,7 @@ function Hydration:ShowPopup(test)
     end
     f:Show()
 
-    if not test then
+    if not silent then
         WorkoutBuddy.Sounds:Play(o.sound)
     end
 

@@ -192,6 +192,23 @@ local defaults = {
             defer_combat = true,
         },
         reminder_queue = {},
+        quiet_hours = {
+            clock = "local", -- "local" (computer clock) or "realm"
+            workouts = {
+                enabled = false,
+                start = 22 * 60, -- minutes since midnight
+                stop = 7 * 60,
+                days = { true, true, true, true, true, true, true }, -- 1 = Sunday
+                mode = "pause", -- "pause" skips suggestions, "collect" queues them silently
+            },
+            hydration = {
+                enabled = false,
+                start = 22 * 60,
+                stop = 7 * 60,
+                days = { true, true, true, true, true, true, true },
+                mode = "pause", -- "pause" skips reminders, "silent" shows them without sound
+            },
+        },
         minimap = {
             hide = false,
             showInCompartment = true,
@@ -235,11 +252,21 @@ function WorkoutBuddy:MigrateProfile()
         end
     end
 
-    -- Triggers from older versions may lack an options table
-    p.triggers = p.triggers or {}
-    for _, t in ipairs(p.triggers) do
-        t.options = type(t.options) == "table" and t.options or {}
+    -- Triggers from older versions may lack an options table; imports may be malformed
+    p.triggers = type(p.triggers) == "table" and p.triggers or {}
+    for i = #p.triggers, 1, -1 do
+        local t = p.triggers[i]
+        if type(t) ~= "table" or type(t.event) ~= "string" then
+            table.remove(p.triggers, i)
+        else
+            t.options = type(t.options) == "table" and t.options or {}
+            t.name = type(t.name) == "string" and t.name or ""
+            if t.custom ~= nil and type(t.custom) ~= "string" then t.custom = nil end
+            if t.customEvent ~= nil and type(t.customEvent) ~= "string" then t.customEvent = nil end
+        end
     end
+
+    self.QuietHours.Sanitize(p.quiet_hours, defaults.profile.quiet_hours)
 
     -- Fields v1 saved but never used
     local rf = p.reminder_frame
@@ -332,8 +359,13 @@ end
 -- @param manual boolean Manual requests skip the pause and cooldown checks.
 function WorkoutBuddy:SuggestWorkout(source, manual)
     local p = self.db.profile
+    local quiet = not manual and self.QuietHours:Mode("workouts")
     if not manual then
         if not p.enabled then return end
+        if quiet == "pause" then
+            self:DbgPrint("Suggestion skipped (quiet hours):", source)
+            return
+        end
         local cd = tonumber(p.suggest_cooldown) or 0
         local now = GetTime()
         if cd > 0 and self.lastSuggestAt and (now - self.lastSuggestAt) < cd then
@@ -358,6 +390,7 @@ function WorkoutBuddy:SuggestWorkout(source, manual)
         self:StartMinimapPulse()
     end
 
+    if quiet then return end -- collected silently: no chat line or sound
     if p.notify.chat then
         self:Print(string.format("|cFFAAFFAA%s|r: %s (%s)",
             source or "Workout", self:FormatWorkout(workout), "|cFF888888/wob show|r"))
@@ -394,6 +427,7 @@ local HELP = {
     "|cFFFFD700/wob water|r - log a drink of water",
     "|cFFFFD700/wob stats|r - print today's progress",
     "|cFFFFD700/wob pause|r / |cFFFFD700resume|r - pause or resume automatic suggestions",
+    "|cFFFFD700/wob quiet|r - show quiet hours status",
     "|cFFFFD700/wob center|r - move the workout and hydration frames to the screen center",
     "|cFFFFD700/wob minimap|r - show or hide the minimap button",
 }
@@ -418,6 +452,11 @@ function WorkoutBuddy:HandleSlashCommand(input)
         self:SetEnabled(false)
     elseif cmd == "resume" or cmd == "on" then
         self:SetEnabled(true)
+    elseif cmd == "quiet" then
+        local QH = self.QuietHours
+        self:Print(QH:ClockLine())
+        print("  " .. QH:StatusLine("workouts"))
+        print("  " .. QH:StatusLine("hydration"))
     elseif cmd == "center" or cmd == "reset" then
         self.ReminderCore:CenterFrame(true)
         self.Hydration:CenterFrame(true)

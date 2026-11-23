@@ -161,6 +161,21 @@ function WorkoutBuddy:SerializeProfile()
     return PROFILE_PREFIX .. AceSerializer:Serialize(copy)
 end
 
+--- Drop imported values whose type does not match the default. Keys with no
+-- default (such as saved frame positions) may hold plain values only.
+local function SanitizeAgainst(data, defaults)
+    for k, v in pairs(data) do
+        local d = defaults[k]
+        if d == nil then
+            if type(v) == "table" or type(v) == "function" then data[k] = nil end
+        elseif type(v) ~= type(d) then
+            data[k] = nil
+        elseif type(v) == "table" and next(d) ~= nil then
+            SanitizeAgainst(v, d)
+        end
+    end
+end
+
 --- Validate and apply an imported profile.
 function WorkoutBuddy:DeserializeProfile(str)
     str = strtrim(str or "")
@@ -180,6 +195,12 @@ function WorkoutBuddy:DeserializeProfile(str)
     for k in pairs(data) do
         if not accepted[k] or (accepted[k] ~= "nil" and type(data[k]) ~= accepted[k]) then
             data[k] = nil
+        end
+    end
+    -- Settings groups (hydration, reminder_frame, ...) are checked key by key
+    for k, v in pairs(data) do
+        if type(v) == "table" and type(known[k]) == "table" and next(known[k]) ~= nil then
+            SanitizeAgainst(v, known[k])
         end
     end
 

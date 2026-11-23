@@ -527,6 +527,226 @@ local tip = { AddLine = function() end }
 local okT = pcall(LibStub("LibDataBroker-1.1"):GetDataObjectByName("WorkoutBuddy").OnTooltipShow, tip)
 check("minimap tooltip", okT)
 
+----------------------------------------------------------------------------
+-- Quiet hours
+local QH = WB.QuietHours
+q = WB.ReminderState.getQueue() -- profile imports above replaced the queue table
+local qh = WB.db.profile.quiet_hours
+-- Set the local clock. 2026-11-20 is a Friday (wday 6).
+local function at(day, hour, min)
+    NOW = os.time({ year = 2026, month = 11, day = day, hour = hour, min = min or 0, sec = 0 })
+end
+local FRI, SAT = 20, 21
+check("quiet: friday fixture", os.date("*t", os.time({ year = 2026, month = 11, day = FRI, hour = 12 })).wday == 6)
+check("quiet: defaults off", qh.workouts.enabled == false and qh.hydration.enabled == false and qh.clock == "local")
+at(FRI, 23)
+check("quiet: disabled is never quiet", not QH:IsQuiet("workouts"))
+qh.workouts.enabled = true -- 22:00 to 07:00 by default
+check("quiet: 23:00 inside", QH:IsQuiet("workouts"))
+at(SAT, 3)
+check("quiet: 03:00 after midnight inside", QH:IsQuiet("workouts"))
+at(FRI, 12)
+check("quiet: noon outside", not QH:IsQuiet("workouts"))
+at(FRI, 7)
+check("quiet: end time is exclusive", not QH:IsQuiet("workouts"))
+at(FRI, 22)
+check("quiet: start time is inclusive", QH:IsQuiet("workouts"))
+
+-- Days: a window past midnight belongs to the day it started
+for i = 1, 7 do qh.workouts.days[i] = (i == 6) end -- Friday only
+at(FRI, 23)
+check("quiet: friday night on", QH:IsQuiet("workouts"))
+at(SAT, 3)
+check("quiet: saturday 3am belongs to friday", QH:IsQuiet("workouts"))
+at(FRI, 3)
+check("quiet: friday 3am belongs to thursday", not QH:IsQuiet("workouts"))
+for i = 1, 7 do qh.workouts.days[i] = true end
+
+-- Daytime window and whole day
+qh.workouts.start, qh.workouts.stop = 9 * 60, 17 * 60
+at(FRI, 12)
+check("quiet: daytime window", QH:IsQuiet("workouts"))
+at(FRI, 20)
+check("quiet: outside daytime window", not QH:IsQuiet("workouts"))
+qh.workouts.start, qh.workouts.stop = 0, 0
+check("quiet: same start and end is all day", QH:IsQuiet("workouts"))
+qh.workouts.start, qh.workouts.stop = 22 * 60, 7 * 60
+
+-- Pause mode: automatic suggestions skipped, manual still works
+WB.ReminderQueue:Clear()
+WB.lastSuggestAt = nil
+at(FRI, 23)
+qh.workouts.mode = "pause"
+FireEvent("PLAYER_LEVEL_UP", 10)
+check("quiet pause: no automatic workout", #q == 0, #q)
+WB:SuggestWorkout("Requested", true)
+check("quiet pause: manual still works", #q == 1, #q)
+
+-- Auto-open never pops the window during quiet hours
+WB.ReminderFrame:Hide()
+WB.ReminderEvents:TryShowFrame()
+check("quiet: no auto-open", not WB.ReminderFrame:IsShown())
+at(FRI, 12)
+WB.ReminderEvents:TryShowFrame()
+check("quiet over: auto-open works", WB.ReminderFrame:IsShown())
+
+-- Collect mode: queued without chat or sound
+WB.ReminderQueue:Clear()
+WB.lastSuggestAt = nil
+at(FRI, 23)
+qh.workouts.mode = "collect"
+WB.db.profile.notify.sound = "Raid Warning"
+local chatBefore, soundsBefore = #CHAT, #SOUNDS_PLAYED
+FireEvent("PLAYER_LEVEL_UP", 11)
+check("quiet collect: queued", #q == 1, #q)
+check("quiet collect: no chat line", #CHAT == chatBefore, #CHAT - chatBefore)
+check("quiet collect: no sound", #SOUNDS_PLAYED == soundsBefore)
+at(FRI, 12)
+WB.lastSuggestAt = nil
+FireEvent("PLAYER_LEVEL_UP", 12)
+check("quiet over: chat and sound back", #CHAT > chatBefore and #SOUNDS_PLAYED > soundsBefore)
+WB.db.profile.notify.sound = "None"
+
+-- Play timer does not count paused quiet time
+qh.workouts.mode = "pause"
+WB.ReminderQueue:Clear()
+WB.db.profile.play_timer_minutes = 10
+WB:StartPlayTimer()
+at(FRI, 23)
+local function minutes(n) for _ = 1, n do Advance(60) NOW = NOW - 60 end end -- keep the clock at 23:00
+minutes(15)
+check("quiet pause: play timer frozen", #q == 0 and (WB.playMinutes or 0) == 0, WB.playMinutes)
+qh.workouts.enabled = false
+
+-- Hydration: pause skips the popup, silent shows it without sound
+local hyd = WB.db.profile.hydration
+hyd.enabled = true
+qh.hydration.enabled = true
+qh.hydration.mode = "pause"
+WorkoutBuddy_HydrationFrame:Hide()
+at(FRI, 23)
+local snd = #SOUNDS_PLAYED
+WB.Hydration:OnTimer()
+check("quiet hydration pause: no popup", not WorkoutBuddy_HydrationFrame:IsShown())
+check("quiet hydration pause: still scheduled", WB.Hydration.timer ~= nil)
+qh.hydration.mode = "silent"
+WB.Hydration:OnTimer()
+check("quiet hydration silent: popup shown", WorkoutBuddy_HydrationFrame:IsShown())
+check("quiet hydration silent: no sound", #SOUNDS_PLAYED == snd)
+WorkoutBuddy_HydrationFrame:Hide()
+at(FRI, 12)
+WB.Hydration:OnTimer()
+check("quiet hydration over: popup with sound", WorkoutBuddy_HydrationFrame:IsShown() and #SOUNDS_PLAYED > snd)
+WorkoutBuddy_HydrationFrame:Hide()
+qh.hydration.enabled = false
+
+-- Realm clock
+qh.workouts.enabled = true
+at(FRI, 12)
+qh.clock = "realm"
+C_DateAndTime = { GetCurrentCalendarTime = function() return { hour = 23, minute = 30, weekday = 6, monthDay = 20, month = 11, year = 2026 } end }
+check("quiet realm: uses realm time", QH:IsQuiet("workouts"))
+C_DateAndTime = nil
+GetGameTime = function() return 23, 15 end
+check("quiet realm: falls back to GetGameTime", QH:IsQuiet("workouts"))
+GetGameTime = nil
+check("quiet realm: falls back to local time", not QH:IsQuiet("workouts"))
+qh.clock = "local"
+
+-- Status text and slash command
+at(FRI, 23)
+check("quiet status quiet", QH:StatusLine("workouts"):find("quiet now") and QH:StatusLine("workouts"):find("7:00 AM"), QH:StatusLine("workouts"))
+at(FRI, 12)
+check("quiet status active", QH:StatusLine("workouts"):find("10:00 PM"), QH:StatusLine("workouts"))
+check("quiet status off", QH:StatusLine("hydration"):find("no quiet hours"))
+check("format time", QH.FormatTime(0) == "12:00 AM (00:00)" and QH.FormatTime(13 * 60 + 45) == "1:45 PM (13:45)")
+check("slash quiet", pcall(WB.HandleSlashCommand, WB, "quiet") and chatHas("Local time now"))
+qh.workouts.enabled = false
+
+-- Bad saved values are repaired
+qh.workouts.start, qh.workouts.mode, qh.clock, qh.hydration.days = "abc", "bogus", "mars", "x"
+WB:MigrateProfile()
+check("quiet sanitize", qh.workouts.start == 22 * 60 and qh.workouts.mode == "pause" and qh.clock == "local"
+    and type(qh.hydration.days) == "table" and qh.hydration.days[3] == true)
+
+-- Quiet settings survive a profile export and import
+qh.workouts.enabled, qh.workouts.start = true, 23 * 60
+qh.workouts.days[1] = false
+local qexport = WB:SerializeProfile()
+qh.workouts.enabled, qh.workouts.start, qh.workouts.days[1] = false, 22 * 60, true
+WB:DeserializeProfile(qexport)
+qh = WB.db.profile.quiet_hours
+check("quiet import roundtrip", qh.workouts.enabled and qh.workouts.start == 23 * 60 and qh.workouts.days[1] == false)
+qh.workouts.enabled = false
+
+----------------------------------------------------------------------------
+-- 2.1.1 fixes
+q = WB.ReminderState.getQueue()
+-- Imported trigger with code never fires, even if switched on another way
+wipe(WB.db.profile.triggers)
+table.insert(WB.db.profile.triggers, { name = "Imp", event = "CHAT_MSG_SAY", action = "workout", enabled = true,
+    imported = true, options = {}, custom = "return false" })
+WB.TriggerManager:Reset()
+WB.ReminderQueue:Clear()
+WB.lastSuggestAt = nil
+FireEvent("CHAT_MSG_SAY", "hi")
+check("imported trigger never fires unreviewed", #q == 0, #q)
+wipe(WB.db.profile.triggers)
+
+-- Health trigger on target re-checks when the target changes
+table.insert(WB.db.profile.triggers, { name = "Target low", event = "UNIT_HEALTH", action = "workout", enabled = true,
+    options = { unit = "target", op = "<", value = 50 } })
+WB.TriggerManager:Reset()
+UnitHealth = function() return 300 end
+FireEvent("UNIT_HEALTH", "target")
+check("target health fires", #q == 1, #q)
+WB.lastSuggestAt = nil
+FireEvent("UNIT_HEALTH", "target")
+check("target health edge holds", #q == 1 and q[1].amount == WB.db.profile.workouts[1].amount or #q == 1)
+local qAmount = 0 for _, w in ipairs(q) do qAmount = qAmount + w.amount end
+FireEvent("PLAYER_TARGET_CHANGED")
+local qAmount2 = 0 for _, w in ipairs(q) do qAmount2 = qAmount2 + w.amount end
+check("new low target fires on target change", qAmount2 > qAmount, qAmount .. " -> " .. qAmount2)
+wipe(WB.db.profile.triggers)
+WB.TriggerManager:Reset()
+UnitHealth = function() return 800 end
+
+-- Partial box follows its workout when a row above is removed
+WB.ReminderQueue:Clear()
+WB.ReminderQueue:AddToQueue({ name = "Top", amount = 5, unit = "reps" })
+WB.ReminderQueue:AddToQueue({ name = "Bottom", amount = 10, unit = "reps" })
+WB.ReminderCore:ShowPartialInput(2)
+WB.ReminderCore:Dismiss(1)
+local box = WB.ReminderCore.partialBox
+box.edit:SetText("4")
+-- the OK button runs the same commit as Enter
+box.edit._scripts.OnEnterPressed(box.edit)
+check("partial follows workout", #q == 1 and q[1].name == "Bottom" and q[1].amount == 6, q[1] and (q[1].name .. " " .. q[1].amount))
+WB.ReminderQueue:Clear()
+
+-- Nested profile import values are type checked
+local bad = LibStub("AceSerializer-3.0"):Serialize({ hydration = { scale = "big", per = 12 },
+    reminder_frame = { x = { 1 }, y = 300, width = "wide" } })
+check("nested import accepted", WB:DeserializeProfile(bad))
+local hp, rp = WB.db.profile.hydration, WB.db.profile.reminder_frame
+check("nested bad types dropped", hp.scale == 1.2 and hp.per == 12 and rp.x == nil and rp.y == 300 and rp.width == 340,
+    tostring(hp.scale) .. " " .. tostring(rp.x) .. " " .. tostring(rp.width))
+
+-- Water totals convert between units
+WB.Stats:Reset()
+WB.db.profile.hydration.unit = "oz"
+WB.Stats:AddWater(8, "oz")
+WB.Hydration:SetUnit("ml")
+WB.Stats:AddWater(250, "ml")
+local wTotal, wUnit = WB.Stats:GetTodayWater()
+check("water mixed units", wUnit == "ml" and wTotal == 487, wTotal .. " " .. tostring(wUnit))
+WB.Hydration:SetUnit("oz")
+
+-- Reset size restores the default size
+WB.db.profile.reminder_frame.width, WB.db.profile.reminder_frame.height = 500, 400
+WB.options.args.display.args.resetSize.func()
+check("reset size uses defaults", WB.db.profile.reminder_frame.width == 340 and WB.db.profile.reminder_frame.height == 170)
+
 check("no error handler calls", not ERRORS, ERRORS)
 realPrint(string.format("RESULT: %d passed, %d failed", pass, fail))
 TEST_FAILURES = fail

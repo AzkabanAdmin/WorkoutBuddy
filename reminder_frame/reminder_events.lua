@@ -59,6 +59,7 @@ end
 ------------------------------------------------------------------------
 function ReminderEvents:TryShowFrame()
     if not (QueueHasItems() or Opts().open_empty) then return end
+    if WorkoutBuddy.QuietHours:IsQuiet("workouts") then return end -- never pop open during quiet hours
     if Opts().defer_combat and WorkoutBuddy.InCombat() then
         self.pendingShow = true
         return
