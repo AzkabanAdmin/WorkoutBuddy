@@ -44,15 +44,19 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 
 - **Released:** 2.2.0 (tag pushed 2026-11-22): quiet hours and the review fixes listed in `CHANGELOG.md`. In-game testing pending.
 - **Previous:** 2.1.0 (2026-11-22).
-- **Tests:** 127 passing (`npm test` in `tests`).
+- **Unreleased on `main`:** 2.2.1, adds `/wob demo` screenshot mode.
+- **Tests:** 146 passing (`npm test` in `tests`).
 
 ## Open work
+
+- **CurseForge page media.** Tim takes the screenshots in game with `/wob demo` on; Claude runs `python scripts/media.py collect`, views each image, crops with `crop` and builds `goal.gif` with `gif`, saving into `media/` with the names `media/curseforge-description.md` uses (`goal.gif`, `queue.png`, `hydration.png`, `quiet-hours.png`, `stats.png`). Then commit and push. CurseForge has no API for gallery images (checked 2026-11-22), so Tim uploads the gallery images and pastes the description once by hand; after that, replacing a file in `media/` updates the page's images.
 
 - In-game check of quiet hours on each client, especially the realm clock (`C_DateAndTime.GetCurrentCalendarTime`, falling back to `GetGameTime`) on Classic Era and Forever.
 - Ideas not started: a "snooze for 1 hour" button, and quiet hours that follow instance or combat state instead of the clock.
 
 ## Change log
 
+- 2026-11-22: `/wob demo` screenshot mode, `scripts/media.py`, CurseForge description in `media/`.
 - 2026-11-22: Review on a second machine; quiet hours feature; fixes for partial logging, target health triggers, mixed water units, nested profile import checks, imported trigger safety and Reset size. Removed merged `codex/*` branches.
 - 2026-11-22: 2.1.0 released (WoW Forever support, packaging, tests).
 

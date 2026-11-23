@@ -327,6 +327,7 @@ function WorkoutBuddy:OnEnable()
 end
 
 function WorkoutBuddy:OnProfileChanged()
+    self.Demo:Stop(true) -- put real data back into the profile it came from
     self:MigrateProfile()
     self.TriggerManager:RegisterEvents()
     self.ReminderEvents:Register()
@@ -428,6 +429,7 @@ local HELP = {
     "|cFFFFD700/wob stats|r - print today's progress",
     "|cFFFFD700/wob pause|r / |cFFFFD700resume|r - pause or resume automatic suggestions",
     "|cFFFFD700/wob quiet|r - show quiet hours status",
+    "|cFFFFD700/wob demo|r - sample data for screenshots (your real data is untouched)",
     "|cFFFFD700/wob center|r - move the workout and hydration frames to the screen center",
     "|cFFFFD700/wob minimap|r - show or hide the minimap button",
 }
@@ -452,6 +454,8 @@ function WorkoutBuddy:HandleSlashCommand(input)
         self:SetEnabled(false)
     elseif cmd == "resume" or cmd == "on" then
         self:SetEnabled(true)
+    elseif cmd == "demo" then
+        self.Demo:Toggle()
     elseif cmd == "quiet" then
         local QH = self.QuietHours
         self:Print(QH:ClockLine())

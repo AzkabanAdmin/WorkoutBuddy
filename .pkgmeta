@@ -20,3 +20,4 @@ ignore:
     - CLAUDE.md
     - tests
     - scripts
+    - media

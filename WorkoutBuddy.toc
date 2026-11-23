@@ -31,6 +31,7 @@ trigger_manager.lua
 events.lua
 hydration.lua
 quiet_hours.lua
+demo.lua
 
 # Reminder frame
 reminder_frame\reminder_state.lua

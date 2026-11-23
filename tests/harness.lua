@@ -747,6 +747,67 @@ WB.db.profile.reminder_frame.width, WB.db.profile.reminder_frame.height = 500, 4
 WB.options.args.display.args.resetSize.func()
 check("reset size uses defaults", WB.db.profile.reminder_frame.width == 340 and WB.db.profile.reminder_frame.height == 170)
 
+----------------------------------------------------------------------------
+-- Demo mode (/wob demo): sample data that never replaces real data
+local Demo = WB.Demo
+at(FRI, 15)
+WB.Stats:Reset()
+WB.ReminderQueue:Clear()
+WB.Stats:AddRecord("Real Workout", 1, "reps", false)
+WB.ReminderQueue:AddToQueue({ name = "Real Queue Item", amount = 3, unit = "reps" })
+local realStats, realQueue = WB.db.profile.stats, WB.db.profile.reminder_queue
+WB.db.profile.daily_goal = 5
+WorkoutBuddy_HydrationFrame:Hide()
+check("slash demo on", pcall(WB.HandleSlashCommand, WB, "demo") and Demo:IsActive())
+local dq = WB.ReminderState.getQueue()
+check("demo sample queue", #dq == 4 and dq[1].name == "Push-ups", #dq)
+check("demo today 4 of 5", WB.Stats:GetTodayLine():find("Today: 4 / 5"), WB.Stats:GetTodayLine())
+check("demo week streak", WB.Stats:GetStreak() == 7, WB.Stats:GetStreak())
+check("demo water shown", select(1, WB.Stats:GetTodayWater()) == 32)
+check("demo history summary", WB.Stats:GetSummary("week"):find("By activity"))
+check("demo window and popup", WB.ReminderFrame:IsShown() and WorkoutBuddy_HydrationFrame:IsShown())
+WB.ReminderCore:Complete(1)
+check("demo goal reached message", chatHas("Daily goal reached"))
+check("demo real stats untouched", #realStats == 1 and realStats[1].activity == "Real Workout")
+check("demo export has real stats", (function()
+    local okD, data = LibStub("AceSerializer-3.0"):Deserialize(WB:SerializeProfile():sub(6))
+    return okD and #data.stats == 1 and data.stats[1].activity == "Real Workout"
+end)())
+check("slash demo off", pcall(WB.HandleSlashCommand, WB, "demo") and not Demo:IsActive())
+check("demo restores real data", WB.db.profile.stats == realStats and WB.db.profile.reminder_queue == realQueue
+    and realQueue[1].name == "Real Queue Item")
+check("demo hides popup", not WorkoutBuddy_HydrationFrame:IsShown())
+
+-- Logout or reload during the demo restores before saving
+-- (Firing PLAYER_LOGOUT itself would also run AceDB's logout cleanup, which
+-- strips defaults from the profile as if the game were closing.)
+Demo:Start()
+check("demo listens for logout", Demo.logoutFrame:IsEventRegistered("PLAYER_LOGOUT"))
+Demo.logoutFrame:GetScript("OnEvent")(Demo.logoutFrame, "PLAYER_LOGOUT")
+check("demo logout restores", not Demo:IsActive() and WB.db.profile.stats == realStats and WB.db.profile.reminder_queue == realQueue)
+
+-- Switching profile during the demo restores the original profile
+Demo:Start()
+WB.db:SetProfile("Second")
+check("demo stops on profile switch", not Demo:IsActive())
+WB.db:SetProfile("Default")
+check("demo profile switch restores", WB.db.profile.stats == realStats and #WB.db.profile.stats == 1)
+
+-- Importing during the demo keeps the import, not the real data
+Demo:Start()
+WB:DeserializeProfile(LibStub("AceSerializer-3.0"):Serialize({ stats = { { activity = "Imported", amount = 1, timestamp = NOW } } }))
+check("demo import wins", not Demo:IsActive() and #WB.db.profile.stats == 1 and WB.db.profile.stats[1].activity == "Imported")
+
+-- Early-morning history stays in time order and never in the future
+local early = os.time({ year = 2026, month = 11, day = FRI, hour = 0, min = 2, sec = 0 })
+local hist = Demo.BuildHistory(early, "oz")
+local ordered, future = true, false
+for i, r in ipairs(hist) do
+    if i > 1 and r.timestamp < hist[i - 1].timestamp then ordered = false end
+    if r.timestamp > early then future = true end
+end
+check("demo history ordered", ordered and not future and #hist == 33 + 28, #hist)
+
 check("no error handler calls", not ERRORS, ERRORS)
 realPrint(string.format("RESULT: %d passed, %d failed", pass, fail))
 TEST_FAILURES = fail

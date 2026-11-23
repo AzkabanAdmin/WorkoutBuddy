@@ -158,6 +158,7 @@ end
 function WorkoutBuddy:SerializeProfile()
     local copy = CopyTable(self.db.profile)
     copy.reminder_queue = nil
+    if self.Demo:IsActive() then copy.stats = CopyTable(self.Demo.saved.stats or {}) end -- never export sample stats
     return PROFILE_PREFIX .. AceSerializer:Serialize(copy)
 end
 
@@ -178,6 +179,7 @@ end
 
 --- Validate and apply an imported profile.
 function WorkoutBuddy:DeserializeProfile(str)
+    self.Demo:Stop(true) -- real data back first, or the demo would restore over the import
     str = strtrim(str or "")
     if str:sub(1, #PROFILE_PREFIX) == PROFILE_PREFIX then
         str = str:sub(#PROFILE_PREFIX + 1)

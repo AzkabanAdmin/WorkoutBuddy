@@ -26,6 +26,7 @@ Works on **WoW Forever**, **Midnight (Retail)** and **Classic Era** from the sam
 | `/wob stats` | Print today's progress |
 | `/wob pause`, `/wob resume` | Pause or resume automatic suggestions |
 | `/wob quiet` | Show quiet hours status |
+| `/wob demo` | Sample data for screenshots; run again (or reload) to restore your real data |
 | `/wob center` | Move the windows back to the middle of the screen |
 | `/wob minimap` | Show or hide the minimap button |
 
@@ -52,6 +53,8 @@ Extract the zip so the folder `WorkoutBuddy` sits inside your game's AddOns fold
 | `stats.lua` | Workout and water history, summaries, goal and streak |
 | `hydration.lua` | Hydration timer and popup |
 | `quiet_hours.lua` | Quiet hours schedules (local or realm clock) |
+| `demo.lua` | `/wob demo` screenshot mode (swaps in sample data, restores on exit or logout) |
+| `media/` | Screenshots and the CurseForge description (not packaged); `scripts/media.py` collects, crops and builds GIFs |
 | `Sounds.lua` | Sound registration through LibSharedMedia |
 | `reminder_frame/` | Queue window: state, queue, auto-open events, UI |
 | `config.lua`, `config/` | Options tabs (AceConfig) and the trigger editor |

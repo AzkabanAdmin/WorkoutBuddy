@@ -1,5 +1,10 @@
 # Workout Buddy
 
+## 2.2.1
+
+### New
+- `/wob demo` fills the workout window, hydration popup and stats with sample data, for taking screenshots. Your real workouts and stats are untouched and come back when you run it again, reload or log out.
+
 ## 2.2.0
 
 ### New
