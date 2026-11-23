@@ -8,6 +8,8 @@
 
 Gaming sessions are long and chairs are comfortable. Workout Buddy hands you a small, doable workout at natural moments: a boss goes down, you level up, you die (push-ups build character), or you have simply been playing for 45 minutes. Tick it off when you are done and watch your daily goal and streak grow.
 
+![Ticking off workouts](https://raw.githubusercontent.com/AzkabanAdmin/WorkoutBuddy/main/media/goal.gif)
+
 ## Features
 
 - **Workouts at the right moments:** boss kills, Mythic+ completions, level ups, XP bubbles, quest turn-ins, achievements, deaths, zone changes, or a play-time break timer.

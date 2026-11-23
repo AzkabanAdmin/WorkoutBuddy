@@ -42,19 +42,23 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 
 ## Status
 
-- **Released:** 2.2.1 (tag pushed 2026-11-22): `/wob demo` screenshot mode.
-- **Previous:** 2.2.0 (quiet hours and review fixes; tested in game by Tim), 2.1.0.
-- **Tests:** 146 passing (`npm test` in `tests`).
+- **Released:** 2.2.2 (tag pushed 2026-11-22): window footer and height fix, page screenshots. First release meant for the public page.
+- **Previous:** 2.2.1 (`/wob demo`), 2.2.0 (quiet hours; tested in game by Tim), 2.1.0.
+- **Tests:** 148 passing (`npm test` in `tests`).
+- **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
 ## Open work
 
-- **CurseForge page media.** Tim takes the screenshots in game with `/wob demo` on; Claude runs `python scripts/media.py collect`, views each image, crops with `crop` and builds `goal.gif` with `gif`, saving into `media/` with the names `media/curseforge-description.md` uses (`goal.gif`, `queue.png`, `hydration.png`, `quiet-hours.png`, `stats.png`). Then commit and push. CurseForge has no API for gallery images (checked 2026-11-22), so Tim uploads the gallery images and pastes the description once by hand; after that, replacing a file in `media/` updates the page's images.
+- **CurseForge page (Tim, by hand, once):** upload the `media/*.png` and `goal.gif` to the gallery, and paste `media/curseforge-description.md` as the description. CurseForge has no API for gallery images (checked 2026-11-22). The description loads images from GitHub, so replacing a file in `media/` later updates the page.
+- **Updating media:** Tim takes shots with `/wob demo` on and drops them in `media/_incoming` (git-ignored). Claude views them, then `python scripts/media.py crop` / `gif` (use `--scale 2` for the small in-game window at 1080p) into `media/` under the names the description uses.
+- **Promotion ideas (Tim's call):** Wago Addons and WoWInterface listings, one post each in r/WowUI and the WoWUIDev Discord, fitness-minded streamers, and a small update around New Year.
 
 - In-game check of quiet hours on each client, especially the realm clock (`C_DateAndTime.GetCurrentCalendarTime`, falling back to `GetGameTime`) on Classic Era and Forever.
 - Ideas not started: a "snooze for 1 hour" button, and quiet hours that follow instance or combat state instead of the clock.
 
 ## Change log
 
+- 2026-11-22: 2.2.2 with CurseForge screenshots and GIF; footer and window height fix.
 - 2026-11-22: `/wob demo` screenshot mode, `scripts/media.py`, CurseForge description in `media/`.
 - 2026-11-22: Review on a second machine; quiet hours feature; fixes for partial logging, target health triggers, mixed water units, nested profile import checks, imported trigger safety and Reset size. Removed merged `codex/*` branches.
 - 2026-11-22: 2.1.0 released (WoW Forever support, packaging, tests).

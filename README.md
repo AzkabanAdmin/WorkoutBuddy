@@ -4,6 +4,8 @@ A World of Warcraft addon that turns moments in the game into short exercise, st
 
 Works on **WoW Forever**, **Midnight (Retail)** and **Classic Era** from the same download.
 
+![Ticking off workouts](media/goal.gif)
+
 ## Features
 
 - **Workout triggers:** level up, XP bubbles, boss kills, Mythic+ completions, quest turn-ins, achievements, deaths, zone changes and a play-time break timer. Options a game client does not support are hidden automatically.
