@@ -82,10 +82,12 @@ end
 local function noop() end
 local Methods = {}
 local FrameMT = { __index = function(t, k) if Methods[k] then return Methods[k] end if type(k) == "string" and k:match("^[A-Z]") then return noop end return nil end }
+local REGION_KINDS = { Texture = true, FontString = true, MaskTexture = true }
 local function NewObject(kind, name, parent)
     local o = setmetatable({ _kind = kind, _scripts = {}, _events = {}, _w = 100, _h = 20,
-        _shown = (kind ~= "Frame"), _name = name, _parent = parent, _alpha = 1 }, FrameMT)
+        _shown = true, _name = name, _alpha = 1, _pts = {}, _kids = {}, _regions = {} }, FrameMT)
     if name then _G[name] = o end
+    if parent then o:SetParent(parent) end
     return o
 end
 function Methods:RegisterEvent(e)
@@ -103,20 +105,108 @@ function Methods:Show() if not self._shown then self._shown = true if self._scri
 function Methods:Hide() if self._shown then self._shown = false if self._scripts.OnHide then self._scripts.OnHide(self) end end end
 function Methods:SetShown(v) if v then self:Show() else self:Hide() end end
 function Methods:IsShown() return self._shown end
-function Methods:IsVisible() return self._shown end
+function Methods:IsVisible()
+    if not self._shown then return false end
+    if self._parent and self._parent.IsVisible then return self._parent:IsVisible() end
+    return true
+end
 function Methods:GetName() return self._name end
 function Methods:GetParent() return self._parent end
-function Methods:SetParent(p) self._parent = p end
-function Methods:SetWidth(w) self._w = w end
-function Methods:SetHeight(h) self._h = h end
-function Methods:SetSize(w, h) self._w, self._h = w, h end
-function Methods:GetWidth() return self._w end
-function Methods:GetHeight() return self._h end
-function Methods:GetSize() return self._w, self._h end
-function Methods:GetLeft() return 100 end
-function Methods:GetRight() return 100 + self._w end
-function Methods:GetTop() return 600 end
-function Methods:GetBottom() return 600 - self._h end
+function Methods:SetParent(p)
+    local old = self._parent
+    if old then
+        local list = REGION_KINDS[self._kind] and old._regions or old._kids
+        for i, c in ipairs(list or {}) do if c == self then table.remove(list, i) break end end
+    end
+    self._parent = p
+    if p and p._kids then
+        table.insert(REGION_KINDS[self._kind] and p._regions or p._kids, self)
+    end
+end
+function Methods:GetChildren() return table.unpack(self._kids or {}) end
+function Methods:GetRegions() return table.unpack(self._regions or {}) end
+function Methods:SetWidth(w) self._w = w; self._wset = true end
+function Methods:SetHeight(h) self._h = h; self._hset = true end
+function Methods:SetSize(w, h) self:SetWidth(w); self:SetHeight(h) end
+
+----------------------------------------------------------------------------
+-- Minimal layout engine: resolves anchors so the tests can find overlaps.
+-- Text width is estimated at 6.5 px per visible character, 13 px per line.
+local CHAR_W, LINE_H = 6.5, 13
+local function VisibleText(t)
+    t = tostring(t or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "  "):gsub("|A.-|a", "")
+    return t
+end
+local function TextWidth(o) return #VisibleText(o._text) * CHAR_W end
+function Methods:SetPoint(point, rel, relPoint, x, y)
+    if type(rel) == "number" then rel, relPoint, x, y = nil, nil, rel, relPoint end
+    if type(relPoint) == "number" then relPoint, x, y = nil, relPoint, x end
+    self._pts[point] = { rel = rel or self._parent, relPoint = relPoint or point, x = x or 0, y = y or 0 }
+end
+function Methods:ClearAllPoints() self._pts = {} end
+function Methods:SetAllPoints(rel)
+    rel = rel or self._parent
+    self._pts = {}
+    self:SetPoint("TOPLEFT", rel, "TOPLEFT", 0, 0)
+    self:SetPoint("BOTTOMRIGHT", rel, "BOTTOMRIGHT", 0, 0)
+end
+function Methods:GetNumPoints() local n = 0 for _ in pairs(self._pts) do n = n + 1 end return n end
+local function HPart(point) if point:find("LEFT") then return "L" elseif point:find("RIGHT") then return "R" end return "C" end
+local function VPart(point) if point:find("TOP") then return "T" elseif point:find("BOTTOM") then return "B" end return "M" end
+local function OwnWidth(o)
+    if o._kind == "FontString" and not o._wset then return TextWidth(o) end
+    return o._w
+end
+local function OwnHeight(o)
+    if o._kind == "FontString" and not o._hset then
+        local w = o._wset and o._w or nil
+        if w and w > 0 and o._wrap ~= false then return math.max(1, math.ceil(TextWidth(o) / w)) * LINE_H end
+        return LINE_H
+    end
+    return o._h
+end
+local resolving = {}
+local function Rect(o)
+    if o == UIParent then return 0, 1920, 1080, 0 end
+    if resolving[o] then return nil end
+    if next(o._pts) == nil then return nil end
+    resolving[o] = true
+    local L, R, C, T, B, M
+    for point, a in pairs(o._pts) do
+        local rl, rr, rt, rb = Rect(a.rel or UIParent)
+        if not rl then resolving[o] = nil return nil end
+        local rh, rv = HPart(a.relPoint), VPart(a.relPoint)
+        local x = (rh == "L" and rl or rh == "R" and rr or (rl + rr) / 2) + a.x
+        local y = (rv == "T" and rt or rv == "B" and rb or (rt + rb) / 2) + a.y
+        local h, v = HPart(point), VPart(point)
+        if h == "L" then L = x elseif h == "R" then R = x else C = x end
+        if v == "T" then T = y elseif v == "B" then B = y else M = y end
+    end
+    resolving[o] = nil
+    local w = (L and R) and (R - L) or OwnWidth(o)
+    local h = (T and B) and (T - B) or OwnHeight(o)
+    local l = L or (R and R - w) or (C and C - w / 2)
+    local t = T or (B and B + h) or (M and M + h / 2)
+    if not (l and t) then return nil end
+    return l, l + w, t, t - h
+end
+function Methods:GetWidth()
+    local l, r = Rect(self)
+    if l then return r - l end
+    return OwnWidth(self)
+end
+function Methods:GetHeight()
+    local _, _, t, b = Rect(self)
+    if t then return t - b end
+    return OwnHeight(self)
+end
+function Methods:GetSize() return self:GetWidth(), self:GetHeight() end
+function Methods:GetLeft() local l = Rect(self) return l or 100 end
+function Methods:GetRight() local l, r = Rect(self) return l and r or (100 + self._w) end
+function Methods:GetTop() local _, _, t = Rect(self) return t or 600 end
+function Methods:GetBottom() local _, _, t, b = Rect(self) return t and b or (600 - self._h) end
+function Methods:GetRect() local l, r, t, b = Rect(self) if l then return l, b, r - l, t - b end end
+function Methods:SetWordWrap(v) self._wrap = v and true or false end
 function Methods:GetCenter() return 200, 500 end
 function Methods:GetScale() return 1 end
 function Methods:GetEffectiveScale() return 1 end
@@ -128,11 +218,10 @@ function Methods:GetObjectType() return self._kind end
 function Methods:IsObjectType(k) return self._kind == k end
 function Methods:SetText(t) self._text = t end
 function Methods:GetText() return self._text end
-function Methods:GetStringWidth() return 50 end
-function Methods:GetStringHeight() return 12 end
+function Methods:GetStringWidth() return TextWidth(self) end
+function Methods:GetStringHeight() return OwnHeight(self) end
 function Methods:GetVerticalScrollRange() return 0 end
 function Methods:GetVerticalScroll() return 0 end
-function Methods:GetNumPoints() return 1 end
 function Methods:GetPoint() return "CENTER", UIParent, "CENTER", 0, 0 end
 function Methods:IsMouseOver() return false end
 function Methods:GetChecked() return self._checked end
@@ -149,8 +238,6 @@ function Methods:GetCursorPosition() return 0 end
 function Methods:GetNumLetters() return 0 end
 function Methods:GetMaxLetters() return 0 end
 function Methods:IsMovable() return true end
-function Methods:GetChildren() return end
-function Methods:GetRegions() return end
 function Methods:CreateTexture() return NewObject("Texture", nil, self) end
 function Methods:CreateFontString() return NewObject("FontString", nil, self) end
 function Methods:CreateAnimationGroup() return NewObject("AnimationGroup", nil, self) end
@@ -163,7 +250,10 @@ function Methods:GetCheckedTexture() self._ct = self._ct or NewObject("Texture")
 function Methods:GetFontString() self._fs = self._fs or NewObject("FontString"); return self._fs end
 function Methods:SetFontString(fs) self._fs = fs end
 function Methods:GetScrollChild() return self._child end
-function Methods:SetScrollChild(c) self._child = c end
+function Methods:SetScrollChild(c)
+    self._child = c
+    if next(c._pts) == nil then c:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0) end
+end
 function Methods:GetID() return 1 end
 function Methods:GetTexture() return "" end
 
@@ -1071,9 +1161,15 @@ IU:Capture(function(name) captured = name end, 30)
 Advance(31)
 check("capture times out", captured == nil)
 SUI:Show("triggers")
-local itemBtn = SUI.FindSpec("triggers", "Your triggers")._row.itemBtn
-local okQuick, eQuick = pcall(itemBtn._scripts.OnClick, itemBtn)
-check("count an item button opens the item form", okQuick and SUI.form and SUI.form.kind == "item", eQuick)
+local listRow = SUI.FindSpec("triggers", "Your triggers")._row
+check("no separate item button", listRow.itemBtn == nil)
+listRow.addBtn._scripts.OnClick(listRow.addBtn)
+local itemTile
+for _, tile in ipairs(SUI.triggerListRow.form.tiles) do
+    if tile:IsShown() and tile.label:GetText() == "I use an item" then itemTile = tile end
+end
+local okQuick, eQuick = pcall(itemTile._scripts.OnClick, itemTile)
+check("add a trigger, I use an item opens the item picker", okQuick and SUI.form and SUI.form.kind == "item", eQuick)
 -- add items the beginner ways: bag list, use-it-to-add-it, typing
 local okBag = pcall(SUI.AddFormItem, SUI, IU:BagItems()[2].displayName)
 check("form: add from bags", okBag and SUI.form.t.options.items == IU:BagItems()[2].displayName, SUI.form.t.options.items)
@@ -1122,6 +1218,110 @@ check("form: event search filters", evRow and evRow:IsShown() and evRow.evt:find
 evRow._scripts.OnClick(evRow)
 check("form: pick event keeps the form", SUI.form and SUI.form.t.event == evRow.evt)
 SUI:CloseTriggerForm()
+
+----------------------------------------------------------------------------
+-- Layout: nothing on any page may overlap (the mock resolves anchors)
+local function Overlaps(label)
+    local found = SUI:CheckLayout()
+    for i = 1, math.min(#found, 10) do realPrint("  OVERLAP " .. label .. ": " .. found[i]) end
+    return #found
+end
+UIK.pairsChecked = 0
+check("no overlaps on any page", Overlaps("pages") == 0)
+check("overlap check measured real layouts", UIK.pairsChecked > 500, UIK.pairsChecked)
+-- the trigger form in each state
+SUI:OpenTriggerForm()
+check("no overlaps: add tiles", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+SUI:OpenTriggerForm(nil, "ITEM_USED")
+SUI:AddFormItem("Major Mana Potion")
+SUI:AddFormItem("Healthstone")
+SUI.form.typed = "po"
+SUI:Render()
+SUI:SetFormGives("set")
+check("no overlaps: item form", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+SUI:OpenTriggerForm()
+SUI.form.kind = "event"
+SUI.form.t.event = "LOOT_OPENED"
+SUI.form.showLua = true
+SUI:Render()
+check("no overlaps: event form", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+SUI:OpenTriggerForm()
+SUI.form.kind = "health"
+SUI.form.t.event = "UNIT_HEALTH"
+SUI:Render()
+check("no overlaps: health form", #UIK.FindOverlaps(SUI.frame) == 0, UIK.FindOverlaps(SUI.frame)[1])
+SUI:CloseTriggerForm()
+-- the checker itself catches a collision
+SUI:Show("stats")
+local probeA = WB.UI.Button(SUI.scroll.content, "Probe A", 120, 24)
+probeA:SetPoint("TOPLEFT", 10, -10)
+local probeB = WB.UI.Button(SUI.scroll.content, "Probe B", 120, 24)
+probeB:SetPoint("TOPLEFT", 60, -15)
+check("overlap checker detects collisions", #UIK.FindOverlaps(SUI.scroll.content) > 0)
+probeA:Hide(); probeB:Hide()
+-- button rows sit side by side (the original bug)
+SUI:Show("hydration")
+local btnRow = SUI.FindSpec("hydration", "Preview, play sound, log a drink")._row
+local b1, b2 = btnRow.buttons[1], btnRow.buttons[2]
+check("buttons in a row do not stack", b2:GetLeft() >= b1:GetRight(), tostring(b1:GetRight()) .. " / " .. tostring(b2:GetLeft()))
+
+-- Slider numbers are editable
+SUI:Show("triggers")
+local cdSpec = SUI.FindSpec("triggers", "Minimum time between random suggestions")
+local cdBox = cdSpec._row.control.box
+cdBox.edit:SetText("47")
+cdBox.edit._scripts.OnEnterPressed(cdBox.edit)
+check("slider: typed value snaps to the step", P.suggest_cooldown == 45, P.suggest_cooldown)
+cdBox.edit:SetText("5000")
+cdBox.edit._scripts.OnEnterPressed(cdBox.edit)
+check("slider: typed value is clamped", P.suggest_cooldown == 900, P.suggest_cooldown)
+cdBox.edit:SetText("abc")
+cdBox.edit._scripts.OnEnterPressed(cdBox.edit)
+check("slider: bad text is ignored", P.suggest_cooldown == 900 and cdBox:GetText() == "900")
+SUI:Show("window")
+local scaleBox = SUI.FindSpec("window", "Scale")._row.control.box
+scaleBox.edit:SetText("150")
+scaleBox.edit._scripts.OnEnterPressed(scaleBox.edit)
+check("slider: percent typed as 150 stores 1.5", P.reminder_frame.scale == 1.5, P.reminder_frame.scale)
+SUI.FindSpec("window", "Scale").set(1)
+
+-- Background opacity fades only the background
+SUI.FindSpec("window", "Background opacity").set(0)
+check("background opacity stored", P.reminder_frame.bg_alpha == 0 and P.reminder_frame.alpha == 0.95)
+SUI.FindSpec("window", "Popup background opacity").set(0.5)
+check("popup background opacity stored", P.hydration.bg_alpha == 0.5)
+WB.Hydration:ShowPopup(true)
+check("popup follows the theme", WB.Hydration.textColor ~= nil and WorkoutBuddy_HydrationFrame.text:GetText():find("Drink"))
+WorkoutBuddy_HydrationFrame:Hide()
+SUI.FindSpec("window", "Background opacity").set(0.92)
+
+-- Chat wording and manual sharing
+local chatSpec = SUI.FindSpec("triggers", "Show new workouts in my chat window")
+check("chat option says only you see it", chatSpec and chatSpec.desc:find("Only you can see"))
+SENT = {}
+SendChatMessage = function(msg, channel) SENT[#SENT + 1] = { msg = msg, channel = channel } end
+IsInGroup = function() return false end
+IsInGuild = function() return true end
+IsInRaid = function() return false end
+WB.Stats:AddRecord("Push-ups", 30, "reps")
+local okShare, whyShare = WB.Stats:Share("today", "PARTY")
+check("share refuses party when not grouped", not okShare and whyShare:find("not in a party") and #SENT == 0)
+okShare = WB.Stats:Share("today", "GUILD")
+check("share posts once to guild", okShare and #SENT == 1 and SENT[1].channel == "GUILD"
+    and SENT[1].msg:find("^Workout Buddy today") and SENT[1].msg:find("Push%-ups"), SENT[1] and SENT[1].msg)
+IN_COMBAT = true
+check("share waits for combat to end", not WB.Stats:Share("today", "GUILD") and #SENT == 1)
+IN_COMBAT = false
+check("share recap uses the last fight", (WB.Stats:ShareText("recap") or ""):find("recap"))
+for i = 1, 40 do WB.Stats:AddRecord("A Long Exercise Name Number " .. i, i, "reps") end
+local long = WB.Stats:ShareText("today")
+check("share line fits in chat", #long <= 255 and long:find("%.%.%.%)"), #long)
+pcall(WB.HandleSlashCommand, WB, "share week guild")
+check("slash share posts", #SENT == 2 and SENT[2].msg:find("this week"))
+pcall(WB.HandleSlashCommand, WB, "share")
+check("slash share without a channel only previews", #SENT == 2 and chatHas("Add where to post it"))
+local okUi = pcall(WB.HandleSlashCommand, WB, "uicheck")
+check("slash uicheck runs", okUi and chatHas("No overlapping controls"))
 
 -- Game detection per client, and live probes that override the table
 local realBuild = GetBuildInfo

@@ -181,47 +181,49 @@ function Stats:GetShortLine()
     return line
 end
 
-function Stats:GetSummary(timeframe)
-    local start, invalid = self:GetStart(timeframe)
-    if invalid then
-        return "|cFFFF5555Could not read that range.|r Try something like 3days, 2weeks or 90minutes."
-    end
-
-    local total, partials, water = 0, 0, 0
-    local wUnit = waterUnit()
-    local byActivity, order = {}, {}
+--- Totals for a time range (start = nil for all time).
+function Stats:Totals(start)
+    local t = { total = 0, partials = 0, water = 0, waterUnit = waterUnit(), byActivity = {}, order = {}, days = 0 }
     local activeDays = {}
-
     for _, r in ipairs(self:GetRecords()) do
         if not start or (r.timestamp or 0) >= start then
             if isWater(r) then
-                water = water + waterAmount(r, wUnit)
+                t.water = t.water + waterAmount(r, t.waterUnit)
             else
-                total = total + 1
-                if r.partial then partials = partials + 1 end
+                t.total = t.total + 1
+                if r.partial then t.partials = t.partials + 1 end
                 activeDays[WorkoutBuddy.DayKey(r.timestamp or 0)] = true
                 local key = r.activity or "?"
-                if not byActivity[key] then
-                    byActivity[key] = { amount = 0, unit = r.unit, sessions = 0 }
-                    order[#order + 1] = key
+                if not t.byActivity[key] then
+                    t.byActivity[key] = { amount = 0, unit = r.unit, sessions = 0 }
+                    t.order[#t.order + 1] = key
                 end
-                local a = byActivity[key]
+                local a = t.byActivity[key]
                 a.amount = a.amount + (r.amount or 0)
                 a.sessions = a.sessions + 1
                 if r.unit and r.unit ~= "" then a.unit = r.unit end
             end
         end
     end
-
-    table.sort(order, function(a, b)
-        if byActivity[a].sessions ~= byActivity[b].sessions then
-            return byActivity[a].sessions > byActivity[b].sessions
+    table.sort(t.order, function(a, b)
+        if t.byActivity[a].sessions ~= t.byActivity[b].sessions then
+            return t.byActivity[a].sessions > t.byActivity[b].sessions
         end
         return a < b
     end)
+    for _ in pairs(activeDays) do t.days = t.days + 1 end
+    t.water = math.floor(t.water + 0.5)
+    return t
+end
 
-    local days = 0
-    for _ in pairs(activeDays) do days = days + 1 end
+function Stats:GetSummary(timeframe)
+    local start, invalid = self:GetStart(timeframe)
+    if invalid then
+        return "|cFFFF5555Could not read that range.|r Try something like 3days, 2weeks or 90minutes."
+    end
+    local t = self:Totals(start)
+    local total, partials, water, wUnit = t.total, t.partials, t.water, t.waterUnit
+    local byActivity, order, days = t.byActivity, t.order, t.days
 
     local lines = {
         string.format("|cFFFFD700Workouts logged:|r %d  |cFF888888(%d partial)|r", total, partials),
@@ -244,4 +246,73 @@ function Stats:GetSummary(timeframe)
         lines[#lines + 1] = "|cFF888888Nothing logged in this period yet. Complete a workout from the reminder frame to start tracking.|r"
     end
     return table.concat(lines, "\n")
+end
+
+------------------------------------------------------------------------
+-- Sharing (only ever sent when the player clicks Share or types /wob share)
+------------------------------------------------------------------------
+local MAX_CHAT = 250
+
+--- "head (part, part, ...)tail", dropping parts that would make the line too
+-- long for chat. A trailing "..." shows that some were left out.
+local function Fit(head, parts, tail)
+    local kept, more = {}, false
+    for _, part in ipairs(parts) do
+        local trial = head .. " (" .. table.concat(kept, ", ") .. (#kept > 0 and ", " or "") .. part .. ", ...)" .. tail
+        if #trial > MAX_CHAT then
+            more = true
+            break
+        end
+        kept[#kept + 1] = part
+    end
+    if #kept > 0 then head = head .. " (" .. table.concat(kept, ", ") .. (more and ", ..." or "") .. ")" end
+    return head .. tail
+end
+
+--- The message for what = "today", "week" or "recap"; nil and a reason if
+-- there is nothing to share.
+function Stats:ShareText(what)
+    if what == "recap" then
+        local r = WorkoutBuddy.ReminderEvents.lastRecap
+        if not r then return nil, "No boss fight or instance recap yet." end
+        return Fit("Workout Buddy " .. r.title:lower() .. ": " .. r.count .. " workout(s) coming up", r.parts, ". Time to move!")
+    end
+    local start = self:GetStart(what == "week" and "week" or "day")
+    local t = self:Totals(start)
+    if t.total == 0 and t.water == 0 then
+        return nil, what == "week" and "Nothing logged this week yet." or "Nothing logged today yet."
+    end
+    local parts = {}
+    for _, key in ipairs(t.order) do
+        local a = t.byActivity[key]
+        parts[#parts + 1] = WorkoutBuddy:FormatWorkout({ name = key, amount = a.amount, unit = a.unit })
+    end
+    local head = what == "week"
+        and string.format("Workout Buddy this week: %d workout(s) on %d day(s)", t.total, t.days)
+        or string.format("Workout Buddy today: %d workout(s)", t.total)
+    local tail = {}
+    local streak = self:GetStreak()
+    if streak > 1 then tail[#tail + 1] = streak .. "-day streak" end
+    if t.water > 0 then tail[#tail + 1] = t.water .. " " .. t.waterUnit .. " of water" end
+    return Fit(head, parts, (#tail > 0 and (", " .. table.concat(tail, ", ")) or "") .. ".")
+end
+
+Stats.SHARE_CHANNELS = {
+    SAY = { label = "Say", ok = function() return true end },
+    PARTY = { label = "Party", ok = function() return IsInGroup and IsInGroup() end, why = "You are not in a party." },
+    RAID = { label = "Raid", ok = function() return IsInRaid and IsInRaid() end, why = "You are not in a raid." },
+    GUILD = { label = "Guild", ok = function() return IsInGuild and IsInGuild() end, why = "You are not in a guild." },
+}
+Stats.SHARE_ORDER = { "PARTY", "RAID", "GUILD", "SAY" }
+
+--- Post one summary to a chat channel. Returns true, or false and a reason.
+function Stats:Share(what, channel)
+    local ch = self.SHARE_CHANNELS[channel]
+    if not ch then return false, "Choose say, party, raid or guild." end
+    if WorkoutBuddy.InCombat() then return false, "Share after combat." end
+    if not ch.ok() then return false, ch.why end
+    local text, why = self:ShareText(what)
+    if not text then return false, why end
+    SendChatMessage(text, channel)
+    return true
 end

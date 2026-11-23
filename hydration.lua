@@ -74,6 +74,7 @@ function Hydration:OnProfileChanged()
     if self.frame then
         self.frame:Hide()
         self:ApplyOptions()
+        self:ApplyTheme()
     end
     self:Resume()
 end
@@ -146,24 +147,23 @@ function Hydration:CreateFrame()
         tile = true, tileSize = 8, edgeSize = 10,
         insets = { left = 3, right = 3, top = 3, bottom = 3 },
     })
-    hf:SetBackdropColor(0.03, 0.08, 0.22, 0.94)
-    hf:SetBackdropBorderColor(0.20, 0.50, 0.90, 0.85)
 
     local headerBg = hf:CreateTexture(nil, "BACKGROUND", nil, 1)
     headerBg:SetPoint("TOPLEFT", hf, "TOPLEFT", 3, -3)
     headerBg:SetPoint("TOPRIGHT", hf, "TOPRIGHT", -3, -3)
     headerBg:SetHeight(26)
-    headerBg:SetColorTexture(0.05, 0.15, 0.40, 0.95)
+    hf.headerBg = headerBg
 
     local headerLine = hf:CreateTexture(nil, "ARTWORK")
     headerLine:SetPoint("TOPLEFT", headerBg, "BOTTOMLEFT")
     headerLine:SetPoint("TOPRIGHT", headerBg, "BOTTOMRIGHT")
     headerLine:SetHeight(1)
-    headerLine:SetColorTexture(0.30, 0.65, 1.00, 0.80)
+    hf.headerLine = headerLine
 
     local title = hf:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("LEFT", headerBg, "LEFT", 8, 0)
-    title:SetText("|cFF66BBFFHydration Reminder|r")
+    title:SetText("Hydration Reminder")
+    hf.title = title
 
     local close = CreateFrame("Button", nil, hf, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 0, 0)
@@ -210,7 +210,41 @@ function Hydration:CreateFrame()
     tinsert(UISpecialFrames, hf:GetName())
     hf:Hide()
     self:ApplyOptions()
+    self:ApplyTheme()
     return hf
+end
+
+local function Hex(c)
+    return string.format("|cFF%02X%02X%02X", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+end
+
+--- Theme colors (Window & look). Background opacity fades only the
+-- backdrop, header and border; the message and buttons stay solid.
+function Hydration:ApplyTheme()
+    local f = self.frame
+    if not f then return end
+    local th = WorkoutBuddy.UI.Theme()
+    local h, a, bg, t = th.header, th.accent, th.bg, th.title
+    local k = tonumber(opts().bg_alpha) or 0.94
+    if f.SetBackdropColor then
+        f:SetBackdropColor(bg[1], bg[2], bg[3], k)
+        f:SetBackdropBorderColor(a[1] * 0.7, a[2] * 0.7, a[3] * 0.7, math.min(1, k + 0.05))
+    end
+    f.headerBg:SetColorTexture(h[1], h[2], h[3], k)
+    f.headerLine:SetColorTexture(a[1], a[2], a[3], 0.8 * k)
+    f.title:SetTextColor(t[1], t[2], t[3])
+    self.textColor, self.amountColor = Hex(a), Hex(t)
+    if f:IsShown() then self:SetMessage() end
+end
+
+function Hydration:SetMessage()
+    local f, o = self.frame, opts()
+    local text, amount = self.textColor or "|cFF66BBFF", self.amountColor or "|cFFFFD700"
+    if o.mode == "interval" then
+        f.text:SetText(text .. "Time to drink some water!|r")
+    else
+        f.text:SetText(string.format("%sDrink |r%s%d %s|r%s of water!|r", text, amount, o.per or 8, self:UnitLabel(), text))
+    end
 end
 
 function Hydration:CenterFrame(save)
@@ -227,12 +261,8 @@ function Hydration:ShowPopup(silent)
     local f = self:CreateFrame()
     self:ApplyOptions()
     local o = opts()
-    if o.mode == "interval" then
-        f.text:SetText("|cFF66BBFFTime to drink some water!|r")
-    else
-        f.text:SetText(string.format("|cFF66BBFFDrink |r|cFFFFD700%d %s|r|cFF66BBFF of water!|r",
-            o.per or 8, self:UnitLabel()))
-    end
+    self:ApplyTheme()
+    self:SetMessage()
     f:Show()
 
     if not silent then

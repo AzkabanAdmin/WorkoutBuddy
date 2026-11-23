@@ -232,6 +232,7 @@ function UI.Input(parent, w, opts)
     holder.placeholder = UI.Text(holder, "GameFontDisable")
     holder.placeholder:SetPoint("LEFT", 7, 0)
     holder.placeholder:SetText(opts.placeholder or "")
+    holder.placeholder.ignoreOverlap = true -- drawn inside the box on purpose
     local function Hint() holder.placeholder:SetShown((e:GetText() or "") == "" and not e:HasFocus()) end
     holder.Hint = Hint
     local function Commit()
@@ -422,18 +423,25 @@ function UI.Chip(parent, text, onClick)
 end
 
 ------------------------------------------------------------------------
--- Slider
+-- Slider with an editable number box (drag for speed, type for precision)
 ------------------------------------------------------------------------
-function UI.Slider(parent, w, minV, maxV, step, onChange, fmt)
+local VALUE_W = 52
+local UNIT_W = 58
+
+--- unit: short suffix shown after the box ("min", "%", "s"...).
+-- percent=true shows 0.5 as 50 (the stored value stays 0.5).
+function UI.Slider(parent, w, minV, maxV, step, onChange, unit, percent)
     local holder = CreateFrame("Frame", nil, parent)
-    holder:SetSize(w or 200, 24)
+    holder:SetSize(w or 230, 24)
+    local mul = percent and 100 or 1
+    step = step or 1
     local s = CreateFrame("Slider", nil, holder)
     s:SetPoint("LEFT", 0, 0)
-    s:SetPoint("RIGHT", -52, 0)
+    s:SetPoint("RIGHT", holder, "RIGHT", -(VALUE_W + 6 + (unit and UNIT_W or 0)), 0)
     s:SetHeight(16)
     s:SetOrientation("HORIZONTAL")
     s:SetMinMaxValues(minV, maxV)
-    s:SetValueStep(step or 1)
+    s:SetValueStep(step)
     if s.SetObeyStepOnDrag then s:SetObeyStepOnDrag(true) end
     s:EnableMouseWheel(true)
     s.track = UI.Tex(s, "BACKGROUND", "off")
@@ -446,36 +454,122 @@ function UI.Slider(parent, w, minV, maxV, step, onChange, fmt)
         thumb:SetSize(10, 16)
         UI.Paint(thumb, "accent")
     end
-    holder.value = UI.Text(holder, "GameFontHighlightSmall", "text")
-    holder.value:SetPoint("RIGHT", 0, 0)
-    holder.value:SetJustifyH("RIGHT")
     holder.slider = s
-    local function Show(v)
-        holder.value:SetText(fmt and fmt(v) or tostring(v))
+
+    local function Snap(v)
+        v = math.max(minV, math.min(maxV, v))
+        v = minV + math.floor((v - minV) / step + 0.5) * step
+        return tonumber(string.format("%.4f", v))
     end
-    s:SetScript("OnValueChanged", function(_, v, user)
-        local st = step or 1
-        v = math.floor(v / st + 0.5) * st
-        if st < 1 then v = tonumber(string.format("%.2f", v)) end
-        Show(v)
+    local function Shown(v)
+        local n = v * mul
+        if math.abs(n - math.floor(n + 0.5)) < 0.001 then return tostring(math.floor(n + 0.5)) end
+        return string.format("%.2f", n)
+    end
+
+    holder.box = UI.Input(holder, VALUE_W, {
+        onCommit = function(text)
+            local n = tonumber(text)
+            if not n then holder.box:SetText(Shown(holder.current or minV)) return end
+            local v = Snap(n / mul)
+            holder:SetValue(v)
+            if onChange then onChange(v) end
+        end,
+    })
+    holder.box:SetPoint("LEFT", s, "RIGHT", 6, 0)
+    holder.box.edit:SetJustifyH("RIGHT")
+    if unit then
+        holder.unit = UI.Text(holder, "GameFontHighlightSmall", "muted")
+        holder.unit:SetPoint("LEFT", holder.box, "RIGHT", 5, 0)
+        holder.unit:SetWidth(UNIT_W - 5)
+        holder.unit:SetWordWrap(false)
+        holder.unit:SetText(unit)
+    end
+
+    s:SetScript("OnValueChanged", function(_, v)
+        v = Snap(v)
+        holder.current = v
+        if not holder.box.edit:HasFocus() then holder.box:SetText(Shown(v)) end
         if holder.setting then return end
         if onChange then onChange(v) end
     end)
     s:SetScript("OnMouseWheel", function(self, delta)
-        local lo, hi = self:GetMinMaxValues()
-        self:SetValue(math.max(lo, math.min(hi, (self:GetValue() or lo) + delta * (step or 1))))
+        self:SetValue(Snap((self:GetValue() or minV) + delta * step))
     end)
     function holder:SetValue(v)
+        v = Snap(tonumber(v) or minV)
+        self.current = v
         self.setting = true
         s:SetValue(v)
         self.setting = nil
-        Show(v)
+        if not self.box.edit:HasFocus() then self.box:SetText(Shown(v)) end
     end
     function holder:SetDisabled(d)
         s:EnableMouse(not d)
+        self.box:SetDisabled(d)
         self:SetAlpha(d and 0.45 or 1)
     end
     return holder
+end
+
+------------------------------------------------------------------------
+-- Overlap check: finds visible controls drawn on top of each other.
+-- Used by /wob uicheck in game and by the offline tests on every page.
+------------------------------------------------------------------------
+local function Rect(r)
+    local l, rt, t, b = r:GetLeft(), r:GetRight(), r:GetTop(), r:GetBottom()
+    if not (l and rt and t and b) then return nil end
+    if rt - l < 1 or t - b < 1 then return nil end
+    return l, rt, t, b
+end
+
+local function Visible(r)
+    if r.IsVisible then return r:IsVisible() end
+    return r:IsShown()
+end
+
+local function Elements(f)
+    local list = {}
+    for _, child in ipairs({ f:GetChildren() }) do
+        if Visible(child) and not child.ignoreOverlap then list[#list + 1] = child end
+    end
+    for _, region in ipairs({ f:GetRegions() }) do
+        if region.GetText and region:GetObjectType() == "FontString" and Visible(region) and not region.ignoreOverlap then
+            local text = region:GetText()
+            if text and text ~= "" then list[#list + 1] = region end
+        end
+    end
+    return list
+end
+
+local function Describe(r)
+    if r.GetText and r:GetText() then return "\"" .. tostring(r:GetText()):sub(1, 30) .. "\"" end
+    if r.label and r.label.GetText then return "[" .. tostring(r.label:GetText()) .. "]" end
+    return r:GetObjectType()
+end
+
+--- Returns a list of "A overlaps B" strings for everything under root.
+function UI.FindOverlaps(root, out, depth)
+    out = out or {}
+    depth = depth or 0
+    if depth > 12 or not Visible(root) then return out end
+    local els = Elements(root)
+    for i = 1, #els do
+        local l1, r1, t1, b1 = Rect(els[i])
+        if l1 then
+            for j = i + 1, #els do
+                local l2, r2, t2, b2 = Rect(els[j])
+                UI.pairsChecked = (UI.pairsChecked or 0) + (l2 and 1 or 0)
+                if l2 and l1 < r2 - 1 and l2 < r1 - 1 and b1 < t2 - 1 and b2 < t1 - 1 then
+                    out[#out + 1] = Describe(els[i]) .. " overlaps " .. Describe(els[j])
+                end
+            end
+        end
+    end
+    for _, child in ipairs({ root:GetChildren() }) do
+        if Visible(child) then UI.FindOverlaps(child, out, depth + 1) end
+    end
+    return out
 end
 
 ------------------------------------------------------------------------

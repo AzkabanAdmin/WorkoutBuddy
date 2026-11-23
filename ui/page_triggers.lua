@@ -165,10 +165,6 @@ local listSpec = {
         row.entryRows = {}
         row.addBtn = UI.Button(row, "+ Add a trigger", 150, 26, "primary", function() Settings:OpenTriggerForm() end)
         row.addBtn:SetPoint("TOPLEFT", 0, -4)
-        row.itemBtn = UI.Button(row, "Count an item I use", 170, 26, nil, function() Settings:OpenTriggerForm(nil, "ITEM_USED") end)
-        row.itemBtn:SetPoint("LEFT", row.addBtn, "RIGHT", 8, 0)
-        row.itemBtn.tipTitle = "Count an item I use"
-        row.itemBtn.tipText = "For example 3 push-ups per mana potion. Pick it from your bags, or just use it."
         row.empty = UI.Text(row, "GameFontHighlight", "muted")
         row.empty:SetText("No triggers are on. Click \"+ Add a trigger\" to choose when to work out.")
     end,
@@ -176,7 +172,6 @@ local listSpec = {
         if Settings.form then return Settings:LayoutTriggerForm(row, width) end
         if row.form then row.form:Hide() end
         row.addBtn:Show()
-        row.itemBtn:SetShown(TM().IsTriggerEventValid("ITEM_USED"))
         local entries = TL():Entries()
         local y = 38
         for i, e in ipairs(entries) do
@@ -597,7 +592,6 @@ end
 function Settings:LayoutTriggerForm(row, width)
     self.triggerListRow = row
     row.addBtn:Hide()
-    row.itemBtn:Hide()
     row.empty:Hide()
     for _, r in ipairs(row.entryRows) do r:Hide() end
     local f = row.form or BuildForm(row)
@@ -889,7 +883,7 @@ Settings:AddPage({
             { type = "slider", label = "Minutes of play before a break",
                 desc = "For the \"Playing for a while\" trigger.", keywords = "play timer sedentary",
                 hidden = function() return not P().event_map.play_timer end,
-                min = 10, max = 120, step = 5, format = function(v) return v .. " min" end,
+                min = 10, max = 120, step = 5, unit = "min",
                 get = function() return P().play_timer_minutes end,
                 set = function(v) P().play_timer_minutes = v end },
 
@@ -897,10 +891,11 @@ Settings:AddPage({
             { type = "slider", label = "Minimum time between random suggestions",
                 desc = "Random suggestions sooner than this after the last one are skipped. Set workouts always count.",
                 keywords = "cooldown flood spam", min = 0, max = 900, step = 15,
-                format = function(v) return v .. " s" end,
+                unit = "seconds",
                 get = function() return P().suggest_cooldown end, set = function(v) P().suggest_cooldown = v end },
-            { type = "toggle", label = "Announce new workouts in chat",
-                desc = "Skipped during combat; the recap after the fight covers it.", keywords = "message print",
+            { type = "toggle", label = "Show new workouts in my chat window",
+                desc = "Only you can see these lines. Workout Buddy never posts to say, party, raid or guild on its own; sharing is always a button you click (Stats page). Skipped during combat; the recap after the fight covers it.",
+                keywords = "message print announce chat private",
                 get = function() return P().notify.chat end, set = function(v) P().notify.chat = v end },
             { type = "select", label = "Sound for new workouts", keywords = "audio alert",
                 values = function()

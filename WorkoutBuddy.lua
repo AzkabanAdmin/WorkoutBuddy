@@ -217,6 +217,7 @@ local defaults = {
             sound = "Alarm Clock",
             scale = 1.2,
             alpha = 0.95,
+            bg_alpha = 0.94, -- background only; alpha fades everything
             auto_hide = 0,
             next_time = 0,
             last_time = 0,
@@ -226,6 +227,7 @@ local defaults = {
             alpha = 0.95,
             width = 340,
             height = 200, -- fits four workouts
+            bg_alpha = 0.92, -- background only; alpha fades everything
             locked = false,
             autocenter = true,
             initialized = false,
@@ -543,6 +545,8 @@ local HELP = {
     "|cFFFFD700/wob pause|r / |cFFFFD700resume|r - pause or resume automatic suggestions",
     "|cFFFFD700/wob quiet|r - show quiet hours status",
     "|cFFFFD700/wob demo|r - sample data for screenshots (your real data is untouched)",
+    "|cFFFFD700/wob share|r [today|week|recap] [party|raid|guild|say] - post a summary (only when you type it)",
+    "|cFFFFD700/wob uicheck|r - check the settings window for overlapping controls",
     "|cFFFFD700/wob center|r - move the workout and hydration frames to the screen center",
     "|cFFFFD700/wob minimap|r - show or hide the minimap button",
 }
@@ -567,6 +571,28 @@ function WorkoutBuddy:HandleSlashCommand(input)
         self:SetEnabled(false)
     elseif cmd == "resume" or cmd == "on" then
         self:SetEnabled(true)
+    elseif cmd == "share" or cmd:match("^share ") then
+        local what, channel = "today", nil
+        for word in cmd:gmatch("%S+") do
+            if word == "today" or word == "week" or word == "recap" then what = word
+            elseif self.Stats.SHARE_CHANNELS[word:upper()] then channel = word:upper() end
+        end
+        if not channel then
+            local text, why = self.Stats:ShareText(what)
+            self:Print("Add where to post it: /wob share " .. what .. " party (or raid, guild, say).")
+            print("  " .. (text and ("Preview: " .. text) or why))
+        else
+            local ok, why = self.Stats:Share(what, channel)
+            if not ok then self:Print("|cFFFF5555" .. why .. "|r") end
+        end
+    elseif cmd == "uicheck" then
+        local found = self.SettingsUI:CheckLayout()
+        if #found == 0 then
+            self:Print("|cFF66FF66No overlapping controls on any settings page.|r")
+        else
+            self:Print(string.format("|cFFFF5555%d overlap(s) found:|r", #found))
+            for i = 1, math.min(#found, 15) do print("  " .. found[i]) end
+        end
     elseif cmd == "demo" then
         self.Demo:Toggle()
     elseif cmd == "quiet" then

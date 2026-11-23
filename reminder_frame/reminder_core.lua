@@ -93,18 +93,24 @@ function ReminderCore:ApplyOptions()
     if f.resizer then f.resizer:SetShown(not o.locked) end
 end
 
---- Color the window with the theme chosen in Window & look.
+--- Color the window with the theme chosen in Window & look. Background
+-- opacity fades only the backdrop, header and border; text stays solid.
 function ReminderCore:ApplyTheme()
     local f = self.frame
     if not f then return end
     local th = WorkoutBuddy.UI.Theme()
     local h, a, bg = th.header, th.accent, th.bg
-    ApplyGradient(f.headerBg, { math.min(1, h[1] * 1.7), math.min(1, h[2] * 1.7), math.min(1, h[3] * 1.7), 0.98 }, { h[1], h[2], h[3], 0.92 })
-    f.headerLine:SetColorTexture(a[1], a[2], a[3], 0.8)
+    local o = Opts()
+    local k = tonumber(o.bg_alpha) or 0.92
+    ApplyGradient(f.headerBg, { math.min(1, h[1] * 1.7), math.min(1, h[2] * 1.7), math.min(1, h[3] * 1.7), k },
+        { h[1], h[2], h[3], k })
+    f.headerLine:SetColorTexture(a[1], a[2], a[3], 0.8 * k)
     if f.SetBackdropColor then
-        f:SetBackdropColor(bg[1], bg[2], bg[3], 0.92)
-        f:SetBackdropBorderColor(a[1] * 0.7, a[2] * 0.7, a[3] * 0.7, 0.85)
+        f:SetBackdropColor(bg[1], bg[2], bg[3], k)
+        f:SetBackdropBorderColor(a[1] * 0.7, a[2] * 0.7, a[3] * 0.7, math.min(1, k + 0.05))
     end
+    self.rowAlpha = k
+    self:UpdateDisplay()
 end
 
 function ReminderCore:CenterFrame(save)
@@ -344,7 +350,9 @@ function ReminderCore:UpdateDisplay()
             f.rows[i] = row
         end
         row.index = i
-        row.baseColor = (i % 2 == 0) and THEME.rowEven or THEME.rowOdd
+        local base = (i % 2 == 0) and THEME.rowEven or THEME.rowOdd
+        local k = self.rowAlpha or 1
+        row.baseColor = { base[1], base[2], base[3], base[4] * k }
         local c = row.baseColor
         row.bg:SetColorTexture(c[1], c[2], c[3], c[4])
         local amount = ""

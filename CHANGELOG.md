@@ -8,6 +8,11 @@
   - **One Triggers page.** Every trigger is one row with its on/off switch and what it gives (a random workout, a set workout and amount, or opening the window). Only the triggers you use are listed; "+ Add a trigger" walks you through when, details and what it gives.
   - **Themes:** Forest (default), Midnight, Ember, Violet and Classic gold, for the settings and the workout window.
   - The game's Options > AddOns entry has a button that opens it, and /wob still does.
+- **Share your progress, only when you choose to.** The Stats page has a Share button (and `/wob share`) that posts one line to party, raid, guild or say: today's workouts, this week, or the last boss fight recap. Workout Buddy never posts anywhere on its own.
+- **Type exact values.** Every slider has a number box next to it.
+- **Background opacity** for the workout window and the hydration popup fades only the dark background, so you can keep the text and buttons solid. Overall opacity still fades everything.
+- The hydration popup follows the theme.
+- The "new workouts" chat option now says plainly that only you see those lines.
 - **Options match your game.** Options for content a game does not have are hidden, for example Mythic+ keystones on WoW Forever and Classic Era. If a game adds that content later, the option appears by itself.
 - **Set workouts per action.** Make something in the game always cost a specific workout, every time it happens. For example: each mana potion adds 3 push-ups and each death adds 5 burpees. Repeats add up in one row, so ten potions become Push-ups x30.
   - Custom triggers have a new action, "Add a set workout every time". These skip the minimum time between suggestions, so every occurrence counts.

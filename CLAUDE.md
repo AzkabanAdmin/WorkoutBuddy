@@ -30,6 +30,7 @@ Running unpackaged shows version "dev" because the TOC holds `@project-version@`
 - **Saved variables:** AceDB copies defaults in once at load. Setting a key to `nil` later does not restore its default; assign the default explicitly. Add upgrades for older saved data to `WorkoutBuddy:MigrateProfile`.
 - **Imports never run code.** Workout lists use the parser in `sharing.lua`; profiles use AceSerializer, and imported Lua conditions stay disabled until reviewed.
 - **UI frames** are created once and reused (see the row pool in `reminder_frame/reminder_core.lua`).
+- **No overlapping controls, ever.** The test mock resolves anchors and sizes (text at about 6.5 px per character), and `npm test` fails if any two visible controls overlap on any settings page or trigger form state (`UI.FindOverlaps`). In game, `/wob uicheck` runs the same check on the real window. Give every control a fixed width, give text an explicit width or wrap, and chain rows of buttons with one anchor each. When adding a page or form state, add it to the overlap tests.
 - **Settings window:** pages are lists of specs in `ui/page_*.lua` and `ui/pages.lua`; `ui/window.lua` builds each row once and re-lays it out. Every spec with a label (or a `search` field) is found by the search. Keep logic out of the UI: trigger rules live in `trigger_list.lua`, imports in `sharing.lua`. Colors come from `UI.THEMES`; paint with `UI.Tex`/`UI.Text` roles so theme changes repaint.
 
 ## Libraries
@@ -47,7 +48,7 @@ Bundled in `Libs/` (not fetched at package time): Ace3 modules AceAddon, AceCons
 - **Released:** 2.2.2 (tag pushed 2026-11-22): window footer and height fix, page screenshots. First release meant for the public page.
 - **Previous:** 2.2.1 (`/wob demo`), 2.2.0 (quiet hours; tested in game by Tim), 2.1.0.
 - **Unreleased (committed locally, not pushed):** 2.3.0: new settings window (own UI kit, side navigation, search, themes), set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), and the boss fight and instance recap. Item triggers requested by a user (ordsneakysneaky, 2026-10-09). Tim is testing it in game through the dev link (CurseForge copy backed up at `_forever_\Interface\WorkoutBuddy-curseforge-backup`; restore it after release).
-- **Tests:** 225 passing (`npm test` in `tests`).
+- **Tests:** 260 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
 ## Open work

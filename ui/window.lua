@@ -44,7 +44,7 @@ end
 ------------------------------------------------------------------------
 -- Rows
 ------------------------------------------------------------------------
-local CONTROL_W = { toggle = 40, slider = 230, select = 230, input = 130, button = 150 }
+local CONTROL_W = { toggle = 40, slider = 290, select = 230, input = 130, button = 150 }
 
 local function BuildControl(row, spec)
     local t = spec.type
@@ -52,7 +52,7 @@ local function BuildControl(row, spec)
         row.control = UI.Switch(row, function(v) spec.set(v); Settings:Changed() end)
     elseif t == "slider" then
         row.control = UI.Slider(row, spec.width or CONTROL_W.slider, spec.min, spec.max, spec.step,
-            function(v) spec.set(v); if spec.live ~= false then Settings:Changed(true) end end, spec.format)
+            function(v) spec.set(v); Settings:Changed(true) end, spec.unit, spec.percent)
     elseif t == "select" then
         row.control = UI.Dropdown(row, spec.width or CONTROL_W.select, {
             values = function() return Value(spec.values) or {} end,
@@ -129,8 +129,12 @@ local function BuildRow(parent, spec)
                     Settings:Changed()
                 end
             end)
-            btn:SetPoint("TOPLEFT", (i == 1) and 12 or 0, -6)
-            if i > 1 then btn:SetPoint("LEFT", row.buttons[i - 1], "RIGHT", 8, 0) end
+            -- one anchor each: the first sits at the row's left, the rest follow it
+            if i == 1 then
+                btn:SetPoint("TOPLEFT", 12, -6)
+            else
+                btn:SetPoint("LEFT", row.buttons[i - 1], "RIGHT", 8, 0)
+            end
             row.buttons[i] = btn
         end
         return row
@@ -178,10 +182,18 @@ local function LayoutRow(row, spec, width)
         row:SetHeight(h)
         return h
     elseif spec.type == "buttons" then
+        local prev
         for i, b in ipairs(spec.items) do
-            row.buttons[i]:SetLabel(Value(b.text))
-            row.buttons[i]:SetShown(not (b.hidden and b.hidden()))
-            row.buttons[i]:SetEnabledState(not (b.disabled and b.disabled()))
+            local btn = row.buttons[i]
+            btn:SetLabel(Value(b.text))
+            local shown = not (b.hidden and b.hidden())
+            btn:SetShown(shown)
+            btn:SetEnabledState(not (b.disabled and b.disabled()))
+            if shown then
+                btn:ClearAllPoints()
+                if prev then btn:SetPoint("LEFT", prev, "RIGHT", 8, 0) else btn:SetPoint("TOPLEFT", row, "TOPLEFT", 12, -6) end
+                prev = btn
+            end
         end
         row:SetHeight(36)
         return 36
@@ -535,6 +547,21 @@ end
 
 function Settings:IsShown()
     return self.frame and self.frame:IsShown()
+end
+
+--- Open every page and list overlapping controls ("Page: A overlaps B").
+-- Used by /wob uicheck and the offline tests.
+function Settings:CheckLayout()
+    local before = self.current
+    local found = {}
+    for _, page in ipairs(self.order) do
+        self:Show(page.key)
+        for _, issue in ipairs(UI.FindOverlaps(self.frame)) do
+            found[#found + 1] = page.label .. ": " .. issue
+        end
+    end
+    self:Show(before)
+    return found
 end
 
 ------------------------------------------------------------------------

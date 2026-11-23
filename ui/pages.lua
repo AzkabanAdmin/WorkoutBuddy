@@ -22,8 +22,6 @@ local function SoundValues()
     return values
 end
 
-local function Percent(v) return math.floor(v * 100 + 0.5) .. "%" end
-
 local function PositiveNumber(text)
     local n = tonumber(text)
     if not n or n <= 0 then return "Enter a number greater than 0." end
@@ -80,20 +78,20 @@ Settings:AddPage({
                 validate = PositiveNumber,
                 get = function() return H().total end, set = function(v) H().total = tonumber(v); Restart() end },
             { type = "slider", label = "Over this many minutes", hidden = function() return not Smart() end,
-                min = 15, max = 720, step = 5, live = false, format = function(v) return v .. " min" end,
+                min = 15, max = 720, step = 5, unit = "min",
                 get = function() return H().timeframe or 120 end, set = function(v) H().timeframe = v; Restart() end },
             { type = "input", label = function() return "Per reminder (" .. unitLabel() .. ")" end,
                 desc = "How much to drink each time you are reminded.", hidden = function() return not Smart() end,
                 validate = PositiveNumber,
                 get = function() return H().per end, set = function(v) H().per = tonumber(v); Restart() end },
             { type = "slider", label = "Remind me every", hidden = Smart,
-                min = 5, max = 240, step = 5, live = false, format = function(v) return v .. " min" end,
+                min = 5, max = 240, step = 5, unit = "min",
                 get = function() return H().interval or 60 end, set = function(v) H().interval = v; Restart() end },
             { type = "select", label = "Sound", keywords = "audio alert",
                 values = SoundValues, get = function() return H().sound or "Alarm Clock" end,
                 set = function(v) H().sound = v; WorkoutBuddy.Sounds:Play(v) end },
             { type = "slider", label = "Hide the popup after", desc = "0 keeps it until you click it.",
-                min = 0, max = 300, step = 5, format = function(v) return v == 0 and "never" or (v .. " s") end,
+                min = 0, max = 300, step = 5, unit = "seconds",
                 get = function() return H().auto_hide or 0 end, set = function(v) H().auto_hide = v end },
             { type = "buttons", search = { label = "Preview, play sound, log a drink", desc = "test hydration popup" }, items = {
                 { text = "Preview popup", func = function() WorkoutBuddy.Hydration:ShowPopup(true) end },
@@ -219,7 +217,7 @@ Settings:AddPage({
     specs = function()
         return {
             { type = "section", label = "Look" },
-            { type = "select", label = "Theme", desc = "Colors for this window and the workout window.",
+            { type = "select", label = "Theme", desc = "Colors for this window, the workout window and the hydration popup.",
                 keywords = "color skin style appearance", width = 200,
                 values = function()
                     local out = {}
@@ -231,6 +229,7 @@ Settings:AddPage({
                     P().theme = v
                     UI.Repaint()
                     WorkoutBuddy.ReminderCore:ApplyTheme()
+                    WorkoutBuddy.Hydration:ApplyTheme()
                 end },
 
             { type = "section", label = "Workout window" },
@@ -243,10 +242,17 @@ Settings:AddPage({
                     WorkoutBuddy.ReminderCore:ApplyOptions()
                 end },
             } },
-            { type = "slider", label = "Scale", min = 0.5, max = 2, step = 0.05, format = Percent,
+            { type = "slider", label = "Scale", min = 0.5, max = 2, step = 0.05, unit = "%", percent = true,
                 get = function() return RF().scale or 1 end,
                 set = function(v) RF().scale = v; WorkoutBuddy.ReminderCore:ApplyOptions() end },
-            { type = "slider", label = "Opacity", min = 0.3, max = 1, step = 0.05, format = Percent,
+            { type = "slider", label = "Background opacity", keywords = "transparent alpha see through",
+                desc = "Fades only the dark background, header and border. Text and buttons stay fully visible. 0 hides the background.",
+                min = 0, max = 1, step = 0.05, unit = "%", percent = true,
+                get = function() return RF().bg_alpha or 0.92 end,
+                set = function(v) RF().bg_alpha = v; WorkoutBuddy.ReminderCore:ApplyTheme() end },
+            { type = "slider", label = "Overall opacity", keywords = "transparent alpha fade",
+                desc = "Fades the whole window, text and buttons included.",
+                min = 0.3, max = 1, step = 0.05, unit = "%", percent = true,
                 get = function() return RF().alpha or 0.95 end,
                 set = function(v) RF().alpha = v; WorkoutBuddy.ReminderCore:ApplyOptions() end },
             { type = "toggle", label = "Lock position and size",
@@ -276,10 +282,17 @@ Settings:AddPage({
                 { text = "Preview", func = function() WorkoutBuddy.Hydration:ShowPopup(true) end },
                 { text = "Move to center", func = function() WorkoutBuddy.Hydration:CenterFrame(true) end },
             } },
-            { type = "slider", label = "Popup scale", min = 0.5, max = 2, step = 0.05, format = Percent,
+            { type = "slider", label = "Popup scale", min = 0.5, max = 2, step = 0.05, unit = "%", percent = true,
                 get = function() return H().scale or 1 end,
                 set = function(v) H().scale = v; WorkoutBuddy.Hydration:ApplyOptions() end },
-            { type = "slider", label = "Popup opacity", min = 0.3, max = 1, step = 0.05, format = Percent,
+            { type = "slider", label = "Popup background opacity", keywords = "transparent alpha water",
+                desc = "Fades only the popup's background, header and border.",
+                min = 0, max = 1, step = 0.05, unit = "%", percent = true,
+                get = function() return H().bg_alpha or 0.94 end,
+                set = function(v) H().bg_alpha = v; WorkoutBuddy.Hydration:ApplyTheme() end },
+            { type = "slider", label = "Popup overall opacity", keywords = "transparent alpha water fade",
+                desc = "Fades the whole popup, text and buttons included.",
+                min = 0.3, max = 1, step = 0.05, unit = "%", percent = true,
                 get = function() return H().alpha or 0.95 end,
                 set = function(v) H().alpha = v; WorkoutBuddy.Hydration:ApplyOptions() end },
 
@@ -300,6 +313,7 @@ Settings:AddPage({
 -- Stats
 ------------------------------------------------------------------------
 local view = { timeframe = "week", custom = "" }
+local share = { what = "today", channel = "PARTY" }
 
 Settings:AddPage({
     key = "stats",
@@ -313,7 +327,7 @@ Settings:AddPage({
             { type = "text", font = "GameFontHighlightLarge", text = function() return "|cFF66FF66" .. WorkoutBuddy.Stats:GetTodayLine() .. "|r" end },
             { type = "slider", label = "Daily goal", desc = "How many workouts you aim for each day. 0 turns the goal off.",
                 keywords = "target streak", min = 0, max = 50, step = 1,
-                format = function(v) return v == 0 and "off" or (v .. " workouts") end,
+                unit = "workouts",
                 get = function() return P().daily_goal or 0 end,
                 set = function(v) P().daily_goal = v; WorkoutBuddy.ReminderCore:UpdateDisplay() end },
             { type = "section", label = "History" },
@@ -332,6 +346,31 @@ Settings:AddPage({
                 end
                 return WorkoutBuddy.Stats:GetSummary(tf)
             end },
+            { type = "section", label = "Share",
+                desc = "Post a one-line summary to a chat channel. Nothing is ever posted unless you click Share." },
+            { type = "select", label = "What to share", width = 220, keywords = "share post announce brag",
+                values = { { value = "today", text = "Today's workouts" }, { value = "week", text = "This week" },
+                    { value = "recap", text = "Last boss fight or instance recap" } },
+                get = function() return share.what end, set = function(v) share.what = v end },
+            { type = "select", label = "Where", width = 220, keywords = "say party raid guild channel",
+                values = function()
+                    local out = {}
+                    for _, key in ipairs(WorkoutBuddy.Stats.SHARE_ORDER) do
+                        out[#out + 1] = { value = key, text = WorkoutBuddy.Stats.SHARE_CHANNELS[key].label }
+                    end
+                    return out
+                end,
+                get = function() return share.channel end, set = function(v) share.channel = v end },
+            { type = "text", role = "muted", text = function()
+                local text, why = WorkoutBuddy.Stats:ShareText(share.what)
+                return text and ("Preview: |cFFFFFFFF" .. text .. "|r") or why
+            end },
+            { type = "button", label = "Share now", desc = "Sends the preview above, once.", text = "Share", kind = "primary",
+                func = function()
+                    local ok, why = WorkoutBuddy.Stats:Share(share.what, share.channel)
+                    Settings:Status(ok and "|cFF66FF66Shared.|r" or ("|cFFFF5555" .. why .. "|r"))
+                end },
+
             { type = "section", label = "Reset" },
             { type = "button", label = "Reset stats", desc = "Deletes all logged workouts and water for this profile.",
                 text = "Reset stats", kind = "danger",

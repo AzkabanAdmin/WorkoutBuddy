@@ -99,6 +99,12 @@ end
 
 function ReminderEvents:ShowRecap(title, tally)
     local text = self.FormatTally(tally)
+    if text then
+        -- kept for sharing later (Stats page or /wob share recap)
+        local parts, count = {}, 0
+        for _, e in ipairs(tally.order) do parts[#parts + 1] = WorkoutBuddy:FormatWorkout(e); count = count + 1 end
+        self.lastRecap = { title = title, parts = parts, count = count, time = WorkoutBuddy.Now() }
+    end
     if not (text and Opts().recap) then return end
     if WorkoutBuddy.QuietHours:IsQuiet("workouts") then return end
     WorkoutBuddy:Print(string.format("|cFFFFD700%s:|r %s", title, text))
