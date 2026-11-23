@@ -55,6 +55,58 @@ function WorkoutBuddy.IsSecret(value)
     return check ~= nil and check(value) == true
 end
 
+--- Which game this is: "forever", "classic" (Classic Era and other classic
+-- clients) or "retail", from the client's interface number.
+function WorkoutBuddy.GameFlavor()
+    local iface = GetBuildInfo and tonumber((select(4, GetBuildInfo()))) or 0
+    if iface >= 100000 then return "retail" end
+    if iface >= 16000 and iface < 17000 then return "forever" end
+    return "classic"
+end
+
+-- Content each game actually has. Forever runs on the modern engine, so
+-- modern event names exist there even without the content; this table
+-- hides those options. A probe that finds the content in the running client
+-- wins over the table, so a client that adds it later shows it by itself.
+-- Keep this current when adding content-based options (see CLAUDE.md).
+WorkoutBuddy.GAME_CONTENT = {
+    keystones = { retail = true,
+        probe = function()
+            local maps = C_ChallengeMode and C_ChallengeMode.GetMapTable and C_ChallengeMode.GetMapTable()
+            return type(maps) == "table" and #maps > 0
+        end },
+    achievements = { retail = true, forever = true },
+    dungeon_finder = { retail = true, forever = true },
+    battlegrounds = { retail = true, forever = true, classic = true },
+}
+
+--- True if the running game has this kind of content.
+function WorkoutBuddy.HasContent(feature)
+    local c = WorkoutBuddy.GAME_CONTENT[feature]
+    if not c then return true end
+    if c[WorkoutBuddy.GameFlavor()] then return true end
+    if c.probe then
+        local ok, found = pcall(c.probe)
+        if ok and found then return true end
+    end
+    return false
+end
+
+-- Game events that only matter where their content exists.
+WorkoutBuddy.EVENT_CONTENT = {
+    CHALLENGE_MODE_COMPLETED = "keystones", CHALLENGE_MODE_START = "keystones", CHALLENGE_MODE_RESET = "keystones",
+    ACHIEVEMENT_EARNED = "achievements", CRITERIA_UPDATE = "achievements",
+    LFG_UPDATE = "dungeon_finder", LFG_PROPOSAL_SHOW = "dungeon_finder", LFG_COMPLETION_REWARD = "dungeon_finder",
+    UPDATE_BATTLEFIELD_STATUS = "battlegrounds",
+}
+
+--- True if the client knows the event and the game has its content.
+function WorkoutBuddy.IsEventUseful(event)
+    if not WorkoutBuddy.IsEventValid(event) then return false end
+    local feature = WorkoutBuddy.EVENT_CONTENT[event]
+    return feature == nil or WorkoutBuddy.HasContent(feature)
+end
+
 --- Current Unix time (server time where available).
 function WorkoutBuddy.Now()
     return (GetServerTime and GetServerTime()) or time()

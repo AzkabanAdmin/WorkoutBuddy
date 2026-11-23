@@ -25,7 +25,7 @@ WorkoutBuddy.BUILTIN_TRIGGER_EVENTS = {
 
 function WorkoutBuddy:IsBuiltInTriggerSupported(key)
     local evt = self.BUILTIN_TRIGGER_EVENTS[key]
-    return evt == nil or self.IsEventValid(evt)
+    return evt == nil or self.IsEventUseful(evt) -- the event exists and the game has the content
 end
 
 function WorkoutBuddy:RegisterBuiltInEvents()

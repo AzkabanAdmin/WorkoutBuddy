@@ -22,6 +22,7 @@ Running unpackaged shows version "dev" because the TOC holds `@project-version@`
 ## Rules that keep it working on every client
 
 - **Events:** only register events through `WorkoutBuddy.SafeRegisterEvent` or after `WorkoutBuddy.IsEventValid`. Each client has a different event set and registering an unknown event raises an error that can stop the addon loading. AceEvent's `RegisterEvent` errors too, so check validity first (see `RegisterBuiltInEvents` in `events.lua`).
+- **Game content:** an event existing is not enough. Forever runs on the modern engine, so modern event names (keystones, for example) exist there without the content. Gate content-based options with `WorkoutBuddy.HasContent(feature)` / `IsEventUseful(event)` and keep `GAME_CONTENT` and `EVENT_CONTENT` in `WorkoutBuddy.lua` current: research each client yourself (warcraft.wiki.gg, the client's data, other addons in the AddOns folders) instead of asking Tim, and prefer a live probe over a hard-coded entry. Known 2026-11-22: Forever has achievements, dungeon finder and battleground queues, no Mythic+.
 - **Secret values:** Forever and Midnight can return secret values from unit APIs such as `UnitHealth`. Check with `WorkoutBuddy.IsSecret` before comparing or doing math.
 - **Lua 5.1:** WoW runs Lua 5.1. Use `loadstring` (not `load`) to compile strings. No `goto`, `//`, bitwise operators or `_ENV`.
 - **APIs:** prefer namespaced APIs (`C_AddOns`, `C_Timer`, `C_EventUtils`) with fallbacks.

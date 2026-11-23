@@ -66,8 +66,9 @@ end
 
 ----------------------------------------------------------------------------
 -- Events
-INVALID_EVENTS = { CHALLENGE_MODE_COMPLETED = true, ACHIEVEMENT_EARNED = true, LFG_UPDATE = true,
-    CHALLENGE_MODE_START = true, WEEKLY_REWARDS_UPDATE = true, PLAYER_SPECIALIZATION_CHANGED = true }
+-- Like the real Forever client: modern event names exist (keystones too),
+-- but some retail-only systems are missing.
+INVALID_EVENTS = { WEEKLY_REWARDS_UPDATE = true, PLAYER_SPECIALIZATION_CHANGED = true }
 C_EventUtils = { IsEventValid = function(e) return not INVALID_EVENTS[e] end }
 local eventFrames = {}
 function FireEvent(event, ...)
@@ -277,7 +278,11 @@ check("version dev fallback", WB.VERSION == "dev", WB.VERSION)
 check("starter workouts seeded", #WB.db.profile.workouts == #WB.DEFAULT_WORKOUTS)
 check("login message", chatHas("loaded"))
 check("first run shows frame", WB.ReminderFrame and WB.ReminderFrame:IsShown())
-check("builtin unsupported hidden", WB:IsBuiltInTriggerSupported("achievement") == false)
+check("forever detected", WB.GameFlavor() == "forever")
+check("keystones hidden on Forever although the event exists", WB.IsEventValid("CHALLENGE_MODE_COMPLETED")
+    and WB:IsBuiltInTriggerSupported("challenge_complete") == false)
+check("achievements shown on Forever", WB:IsBuiltInTriggerSupported("achievement") == true)
+check("queues shown on Forever", WB.ReminderEvents.IsQueueOptionSupported())
 check("builtin supported", WB:IsBuiltInTriggerSupported("boss_kill") == true)
 check("settings window registered", WB.SettingsUI and WB.SettingsUI.pages.triggers and WB.SettingsUI.blizzardPanel)
 
@@ -1117,6 +1122,30 @@ check("form: event search filters", evRow and evRow:IsShown() and evRow.evt:find
 evRow._scripts.OnClick(evRow)
 check("form: pick event keeps the form", SUI.form and SUI.form.t.event == evRow.evt)
 SUI:CloseTriggerForm()
+
+-- Game detection per client, and live probes that override the table
+local realBuild = GetBuildInfo
+GetBuildInfo = function() return "12.0.5", "1", "Nov 2026", 120005 end
+check("retail detected, keystones shown", WB.GameFlavor() == "retail" and WB:IsBuiltInTriggerSupported("challenge_complete"))
+GetBuildInfo = function() return "1.15.9", "1", "Nov 2026", 11509 end
+check("classic detected, no keystones or achievements", WB.GameFlavor() == "classic"
+    and not WB.HasContent("keystones") and not WB.HasContent("achievements") and WB.HasContent("battlegrounds"))
+GetBuildInfo = realBuild
+C_ChallengeMode = { GetMapTable = function() return { 375, 376 } end }
+check("probe: a client that adds keystones shows them", WB.HasContent("keystones") and WB:IsBuiltInTriggerSupported("challenge_complete"))
+C_ChallengeMode = { GetMapTable = function() return {} end }
+check("probe: empty keystone list stays hidden", not WB.HasContent("keystones"))
+C_ChallengeMode = { GetMapTable = function() error("not here") end }
+check("probe errors are safe", not WB.HasContent("keystones"))
+C_ChallengeMode = nil
+WB.TriggerManager.EventCategories = nil
+WB.TriggerManager:BuildCatalog()
+local hasKeystoneEvent = false
+for _, list in pairs(WB.TriggerManager.EventCategories) do
+    for _, e in ipairs(list) do if e == "CHALLENGE_MODE_COMPLETED" then hasKeystoneEvent = true end end
+end
+check("event list hides keystone events on Forever", not hasKeystoneEvent)
+check("unknown content counts as present", WB.HasContent("something_new"))
 
 check("no error handler calls", not ERRORS, ERRORS)
 realPrint(string.format("RESULT: %d passed, %d failed", pass, fail))

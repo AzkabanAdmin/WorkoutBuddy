@@ -38,7 +38,7 @@ function TriggerManager:BuildCatalog()
     self.EventCategories, self.CategoryOrder = {}, {}
     local seen = {}
     for _, evt in ipairs(WorkoutBuddy.WowEvents or {}) do
-        if not seen[evt] and WorkoutBuddy.IsEventValid(evt) then
+        if not seen[evt] and WorkoutBuddy.IsEventUseful(evt) then -- hide events for content this game lacks
             seen[evt] = true
             local cat = CategoryOf(evt)
             if not self.EventCategories[cat] then

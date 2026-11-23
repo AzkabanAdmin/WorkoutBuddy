@@ -46,7 +46,7 @@ local function IsInQueue()
 end
 
 function ReminderEvents.IsQueueOptionSupported()
-    return WorkoutBuddy.IsEventValid("LFG_UPDATE") or WorkoutBuddy.IsEventValid("UPDATE_BATTLEFIELD_STATUS")
+    return WorkoutBuddy.IsEventUseful("LFG_UPDATE") or WorkoutBuddy.IsEventUseful("UPDATE_BATTLEFIELD_STATUS")
 end
 
 function ReminderEvents.QuestEvent()
