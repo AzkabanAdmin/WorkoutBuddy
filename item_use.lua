@@ -41,8 +41,8 @@ end
 local function ItemInstant(itemID)
     local fn = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
     if not fn then return nil end
-    local ok, _, _, _, _, _, classID, subclassID = pcall(fn, itemID)
-    if ok then return classID, subclassID end
+    local ok, _, _, _, _, icon, classID, subclassID = pcall(fn, itemID)
+    if ok then return classID, subclassID, icon end
 end
 
 local function ItemName(itemID)
@@ -79,7 +79,7 @@ end
 -- Bag lookup: use-spell -> item details
 ------------------------------------------------------------------------
 function ItemUse:Rebuild()
-    local bySpell, byName = {}, {}
+    local bySpell, byName, items = {}, {}, {}
     local numSlots, itemIDAt = ContainerAPI()
     if numSlots and itemIDAt then
         local lastBag = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
@@ -91,15 +91,19 @@ function ItemUse:Rebuild()
                 if okI and itemID and not seen[itemID] then
                     seen[itemID] = true
                     local spellName, spellID = ItemSpell(itemID)
-                    if spellName or spellID then
-                        local classID, subclassID = ItemInstant(itemID)
+                    local displayName = ItemName(itemID)
+                    if (spellName or spellID) and displayName then
+                        local classID, subclassID, icon = ItemInstant(itemID)
                         local info = {
                             itemID = itemID,
-                            name = (ItemName(itemID) or ""):lower(),
+                            displayName = displayName,
+                            icon = icon,
+                            name = displayName:lower(),
                             spellName = (spellName or ""):lower(),
                             classID = classID,
                             subclassID = subclassID,
                         }
+                        items[#items + 1] = info
                         if spellID then bySpell[spellID] = info end
                         if spellName then byName[spellName:lower()] = info end
                     end
@@ -107,7 +111,32 @@ function ItemUse:Rebuild()
             end
         end
     end
-    self.bySpell, self.byName = bySpell, byName
+    table.sort(items, function(a, b)
+        local ac, bc = a.classID == CONSUMABLE_CLASS, b.classID == CONSUMABLE_CLASS
+        if ac ~= bc then return ac end -- consumables first
+        return a.displayName < b.displayName
+    end)
+    self.bySpell, self.byName, self.items = bySpell, byName, items
+end
+
+--- Usable items in the bags (consumables first), for the editor's picker.
+function ItemUse:BagItems()
+    self:Rebuild()
+    return self.items
+end
+
+--- Bag items whose name contains the typed text (case-insensitive).
+function ItemUse:Suggest(text, limit)
+    local needle = ItemUse.CleanName(text):lower()
+    local out = {}
+    if needle == "" then return out end
+    for _, info in ipairs(self.items or self:BagItems()) do
+        if info.name:find(needle, 1, true) then
+            out[#out + 1] = info
+            if #out >= (limit or 6) then break end
+        end
+    end
+    return out
 end
 
 --- Details for a successful spellcast: the item it came from, if any, plus
@@ -121,7 +150,7 @@ function ItemUse:Lookup(spellID)
     if not spellName then return nil end
     info = self.byName[spellName:lower()]
     if info then return info end
-    return { name = "", spellName = spellName:lower() } -- a plain spell, not from an item
+    return { name = "", spellName = spellName:lower(), displayName = spellName } -- a plain spell, not from an item
 end
 
 local function HasWord(info, word)
@@ -129,14 +158,85 @@ local function HasWord(info, word)
         or (info.spellName ~= "" and info.spellName:find(word, 1, true))
 end
 
---- Split "Mana Potion, Healthstone" into lowercase names.
-function ItemUse.ParseNames(text)
+--- Plain name from typed text or a shift-clicked / dragged item link.
+-- "|cff..|Hitem:..|h[Major Mana Potion]|h|r" becomes "Major Mana Potion";
+-- quality and texture icons inside the name are removed.
+function ItemUse.CleanName(text)
+    text = tostring(text or "")
+    text = text:match("|h%[(.-)%]|h") or text
+    text = text:gsub("|A.-|a", ""):gsub("|T.-|t", ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    return strtrim(text)
+end
+
+--- The names in a trigger's list, in their original spelling.
+function ItemUse.NameList(text)
     local names = {}
-    for part in tostring(text or ""):gmatch("[^,;]+") do
-        local n = strtrim(part):lower()
+    -- links may contain commas in other fields, so pull them out first
+    local rest = tostring(text or ""):gsub("|H.-|h%[(.-)%]|h", function(n) return "," .. n .. "," end)
+    for part in rest:gmatch("[^,;]+") do
+        local n = ItemUse.CleanName(part)
         if n ~= "" then names[#names + 1] = n end
     end
     return names
+end
+
+--- Split "Mana Potion, Healthstone" into lowercase names.
+function ItemUse.ParseNames(text)
+    local names = ItemUse.NameList(text)
+    for i, n in ipairs(names) do names[i] = n:lower() end
+    return names
+end
+
+--- The list text with a name added (no duplicates) or removed.
+function ItemUse.AddName(text, name)
+    name = ItemUse.CleanName(name)
+    local names = ItemUse.NameList(text)
+    if name == "" then return table.concat(names, ", ") end
+    for _, n in ipairs(names) do
+        if n:lower() == name:lower() then return table.concat(names, ", ") end
+    end
+    names[#names + 1] = name
+    return table.concat(names, ", ")
+end
+
+function ItemUse.RemoveName(text, name)
+    local out = {}
+    for _, n in ipairs(ItemUse.NameList(text)) do
+        if n:lower() ~= tostring(name):lower() then out[#out + 1] = n end
+    end
+    return table.concat(out, ", ")
+end
+
+------------------------------------------------------------------------
+-- "Use an item to add it": catch the next item or spell the player uses
+------------------------------------------------------------------------
+function ItemUse:Capture(callback, seconds)
+    self:StopCapture()
+    self:Rebuild()
+    local f = self.captureFrame or CreateFrame("Frame")
+    self.captureFrame = f
+    f:SetScript("OnEvent", function(_, _, unit, _, spellID)
+        if unit ~= "player" or WorkoutBuddy.IsSecret(spellID) then return end
+        local info = ItemUse:Lookup(spellID)
+        if not (info and info.displayName) then return end
+        ItemUse:StopCapture()
+        callback(info.displayName)
+    end)
+    if not WorkoutBuddy.SafeRegisterEvent(f, "UNIT_SPELLCAST_SUCCEEDED") then return false end
+    self.captureTimer = C_Timer.NewTimer(seconds or 30, function()
+        ItemUse.captureTimer = nil
+        ItemUse:StopCapture()
+        callback(nil)
+    end)
+    return true
+end
+
+function ItemUse:StopCapture()
+    if self.captureFrame then self.captureFrame:UnregisterAllEvents() end
+    if self.captureTimer then
+        self.captureTimer:Cancel()
+        self.captureTimer = nil
+    end
 end
 
 --- Does this use match a trigger's options ({ preset = ..., items = "..." })?
@@ -172,7 +272,7 @@ function ItemUse:SetActive(on)
     self.frame:UnregisterAllEvents()
     self.active = on and true or false
     if not on then
-        self.bySpell, self.byName = nil, nil
+        self.bySpell, self.byName, self.items = nil, nil, nil
         return
     end
     if not WorkoutBuddy.SafeRegisterEvent(self.frame, "BAG_UPDATE_DELAYED") then

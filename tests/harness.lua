@@ -982,6 +982,40 @@ wipe(P.triggers)
 WB.TriggerManager:Reset()
 check("item use idle again", not WB.ItemUse.active)
 
+-- Beginner-friendly item picking
+local classicLink = "|cff1eff00|Hitem:13444::::::::60:::::|h[Major Mana Potion]|h|r"
+local retailLink = "|cnIQ3:|Hitem:212241::::::::80:::::|h[Algari Mana Potion |A:Professions-ChatIcon-Quality-Tier3:17:17::1|a]|h|r"
+check("link to name (classic)", IU.CleanName(classicLink) == "Major Mana Potion", IU.CleanName(classicLink))
+check("link to name (quality icon)", IU.CleanName(retailLink) == "Algari Mana Potion", IU.CleanName(retailLink))
+check("typed name trimmed", IU.CleanName("  Healthstone ") == "Healthstone")
+local list = IU.AddName("", classicLink)
+list = IU.AddName(list, "healthstone")
+list = IU.AddName(list, "Major Mana Potion") -- duplicate, any case
+check("add names without duplicates", list == "Major Mana Potion, healthstone", list)
+check("remove a name", IU.RemoveName(list, "HEALTHSTONE") == "Major Mana Potion")
+check("names from a pasted link list", #IU.NameList(classicLink .. ", Healthstone") == 2)
+check("stored link still matches", IU.Matches({ preset = "named", items = classicLink }, IU:Lookup(5001)))
+local bagItems = IU:BagItems()
+check("bag picker lists usable items", #bagItems == 4 and bagItems[1].displayName == "Healthstone", #bagItems)
+local sug = IU:Suggest("mana")
+check("typing suggests from bags", #sug == 1 and sug[1].displayName == "Major Mana Potion", #sug)
+check("suggest accepts a link", #IU:Suggest(classicLink) == 1)
+check("no suggestion for empty text", #IU:Suggest("") == 0)
+local captured = false
+check("capture starts", IU:Capture(function(name) captured = name end, 30))
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "raid2", "Cast-8", 5002)
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-9", 5002)
+check("use an item to add it", captured == "Healthstone", tostring(captured))
+FireEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-10", 5001)
+check("capture stops after one", captured == "Healthstone")
+captured = false
+IU:Capture(function(name) captured = name end, 30)
+Advance(31)
+check("capture times out", captured == nil)
+local okQuick, eQuick = pcall(WB.options.args.general.args.addItem.func)
+check("count an item button opens editor", okQuick and WB.triggerEditor ~= nil, eQuick)
+WB.triggerEditor:Hide()
+
 check("no error handler calls", not ERRORS, ERRORS)
 realPrint(string.format("RESULT: %d passed, %d failed", pass, fail))
 TEST_FAILURES = fail

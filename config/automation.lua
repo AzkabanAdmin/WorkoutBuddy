@@ -16,16 +16,17 @@ local ACTIONS = {
 local ACTION_ORDER = { "workout", "fixed", "open_frame" }
 
 --- Open the trigger editor.
--- @param action string "workout" or "open_frame" for a new trigger
+-- @param action string "workout", "fixed" or "open_frame" for a new trigger
 -- @param index  number index of an existing trigger to edit, or nil
-function WorkoutBuddy:OpenTriggerEditor(action, index)
+-- @param event  string starting event for a new trigger (e.g. "ITEM_USED")
+function WorkoutBuddy:OpenTriggerEditor(action, index, event)
     local TM = self.TriggerManager
     TM:BuildCatalog()
 
     local triggers = self.db.profile.triggers
     local original = index and triggers[index]
     local t = original and CopyTable(original)
-        or { name = "", event = "PLAYER_LEVEL_UP", action = action or "workout", enabled = true, options = {} }
+        or { name = "", event = event or "PLAYER_LEVEL_UP", action = action or "workout", enabled = true, options = {} }
     t.options = type(t.options) == "table" and t.options or {}
     t._lastPass = nil
 
@@ -35,11 +36,13 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
 
     local frame = AceGUI:Create("Frame")
     frame:SetTitle(original and "Edit Trigger" or "New Trigger")
-    frame:SetStatusText("Pick a game event, then choose what happens when it fires.")
+    frame:SetStatusText(t.event == TM.ITEM_USED and "Add the items to count, then choose the workout."
+        or "Pick a game event, then choose what happens when it fires.")
     frame:SetWidth(480)
-    frame:SetHeight(600)
+    frame:SetHeight(640)
     frame:SetLayout("Flow")
     frame:SetCallback("OnClose", function(widget)
+        WorkoutBuddy.ItemUse:StopCapture()
         AceGUI:Release(widget)
         if self.triggerEditor == widget then self.triggerEditor = nil end
     end)
@@ -151,7 +154,7 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
 
         if isItem then
             local IU = WorkoutBuddy.ItemUse
-            t.options.preset = t.options.preset or "potion"
+            t.options.preset = t.options.preset or "named"
             local preset = AceGUI:Create("Dropdown")
             preset:SetLabel("Count when I use")
             preset:SetList(IU.PRESET_LABELS, IU.PRESET_ORDER)
@@ -163,13 +166,101 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
             end)
             optionsGroup:AddChild(preset)
             if t.options.preset == "named" then
-                local names = AceGUI:Create("EditBox")
-                names:SetLabel("Item or spell names, separated by commas")
-                names:SetFullWidth(true)
-                names:DisableButton(true)
-                names:SetText(t.options.items or "")
-                names:SetCallback("OnTextChanged", function(_, _, v) t.options.items = v end)
-                optionsGroup:AddChild(names)
+                local function AddItem(name)
+                    local before = t.options.items or ""
+                    t.options.items = IU.AddName(before, name)
+                    BuildEventOptions()
+                    if t.options.items ~= before then
+                        frame:SetStatusText("|cFF66FF66Added " .. IU.CleanName(name) .. ".|r")
+                    end
+                end
+
+                -- What is counted now, with a Remove button each
+                local added = IU.NameList(t.options.items)
+                local listHead = AceGUI:Create("Label")
+                listHead:SetFullWidth(true)
+                listHead:SetText(#added > 0 and "|cFFFFD700Counting:|r"
+                    or "|cFF888888Nothing added yet. Pick from your bags, use the item, or type its name below.|r")
+                optionsGroup:AddChild(listHead)
+                for _, name in ipairs(added) do
+                    local label = AceGUI:Create("Label")
+                    label:SetText("  " .. name)
+                    label:SetRelativeWidth(0.7)
+                    optionsGroup:AddChild(label)
+                    local remove = AceGUI:Create("Button")
+                    remove:SetText("Remove")
+                    remove:SetRelativeWidth(0.28)
+                    remove:SetCallback("OnClick", function()
+                        t.options.items = IU.RemoveName(t.options.items, name)
+                        BuildEventOptions()
+                    end)
+                    optionsGroup:AddChild(remove)
+                end
+
+                -- 1. Pick from the bags
+                local bag = AceGUI:Create("Dropdown")
+                bag:SetLabel("Add from your bags")
+                local bagList, bagOrder = {}, {}
+                for i, item in ipairs(IU:BagItems()) do
+                    bagList[i] = (item.icon and ("|T" .. item.icon .. ":16|t ") or "") .. item.displayName
+                    bagOrder[#bagOrder + 1] = i
+                end
+                if #bagOrder == 0 then bag:SetText("|cFF888888No usable items in your bags|r") end
+                bag:SetList(bagList, bagOrder)
+                bag:SetRelativeWidth(0.58)
+                bag:SetCallback("OnValueChanged", function(_, _, i)
+                    local item = IU:BagItems()[i]
+                    if item then AddItem(item.displayName) end
+                end)
+                optionsGroup:AddChild(bag)
+
+                -- 2. Use the item and it is added
+                local capture = AceGUI:Create("Button")
+                capture:SetText("Use an item to add it")
+                capture:SetRelativeWidth(0.4)
+                capture:SetCallback("OnClick", function()
+                    local ok = IU:Capture(function(name)
+                        if WorkoutBuddy.triggerEditor ~= frame then return end -- editor was closed
+                        if name then
+                            AddItem(name)
+                        else
+                            frame:SetStatusText("Stopped waiting. Click \"Use an item to add it\" to try again.")
+                        end
+                    end, 30)
+                    frame:SetStatusText(ok and "|cFFFFD700Now use the item (drink the potion, eat the food...). Waiting 30 seconds.|r"
+                        or "|cFFFF5555This game client cannot watch item use.|r")
+                end)
+                optionsGroup:AddChild(capture)
+
+                -- 3. Type, shift-click or drag, with suggestions from the bags
+                local typed = AceGUI:Create("EditBox")
+                typed:SetLabel("Or type a name (shift-click or drag an item here works too)")
+                typed:SetFullWidth(true)
+                typed:SetText("")
+                local suggest = AceGUI:Create("SimpleGroup")
+                suggest:SetFullWidth(true)
+                suggest:SetLayout("Flow")
+                local function ShowSuggestions(text)
+                    suggest:ReleaseChildren()
+                    for _, item in ipairs(IU:Suggest(text, 5)) do
+                        local s = AceGUI:Create("InteractiveLabel")
+                        s:SetFullWidth(true)
+                        s:SetText("    |cFF66BBFF+|r " .. (item.icon and ("|T" .. item.icon .. ":14|t ") or "")
+                            .. item.displayName .. " |cFF888888(in your bags, click to add)|r")
+                        s:SetHighlight("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+                        s:SetCallback("OnClick", function() AddItem(item.displayName) end)
+                        suggest:AddChild(s)
+                    end
+                    suggest:DoLayout()
+                    optionsGroup:DoLayout()
+                    frame:DoLayout()
+                end
+                typed:SetCallback("OnTextChanged", function(_, _, v) ShowSuggestions(v) end)
+                typed:SetCallback("OnEnterPressed", function(_, _, v)
+                    if IU.CleanName(v) ~= "" then AddItem(v) end -- Add button, Enter, or a dragged item
+                end)
+                optionsGroup:AddChild(typed)
+                optionsGroup:AddChild(suggest)
             end
         end
 
@@ -373,6 +464,12 @@ function WorkoutBuddy:OpenTriggerEditor(action, index)
         t.imported = nil
         t._lastPass = nil
         t.name = strtrim(t.name or "")
+        if t.name == "" and t.event == TM.ITEM_USED then
+            -- Name it after what it counts, e.g. "Major Mana Potion" or "Any potion"
+            local preset = t.options.preset or "named"
+            t.name = preset == "named" and table.concat(WorkoutBuddy.ItemUse.NameList(t.options.items), ", ")
+                or WorkoutBuddy.ItemUse.PRESET_LABELS[preset] or ""
+        end
 
         if original then
             wipe(original)

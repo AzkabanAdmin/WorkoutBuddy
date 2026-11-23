@@ -118,6 +118,15 @@ function WorkoutBuddy.ConfigTabs.General()
                 order = 14,
                 args = {}, -- filled by RebuildCustomEventToggles
             },
+            addItem = {
+                type = "execute",
+                name = "Count an item I use",
+                desc = "Add a set workout every time you use an item, such as 3 push-ups per mana potion. Pick it from your bags, or just use it.",
+                width = 1.2,
+                order = 14.5,
+                hidden = function() return not WorkoutBuddy.TriggerManager.IsTriggerEventValid("ITEM_USED") end,
+                func = function() WorkoutBuddy:OpenTriggerEditor("fixed", nil, "ITEM_USED") end,
+            },
             addCustom = {
                 type = "execute",
                 name = "Add custom trigger",

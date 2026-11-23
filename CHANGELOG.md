@@ -6,7 +6,11 @@
 - **Set workouts per action.** Make something in the game always cost a specific workout, every time it happens. For example: each mana potion adds 3 push-ups and each death adds 5 burpees. Repeats add up in one row, so ten potions become Push-ups x30.
   - Custom triggers have a new action, "Add a set workout every time". These skip the minimum time between suggestions, so every occurrence counts.
   - Built-in events (You died, Boss defeated, Level up and the rest) can each have a set workout instead of a random one. Find it under Workouts > Set workouts for events.
-- **"I use an item or spell" trigger.** Count potions, healthstones, food and drink, flasks and elixirs, any consumable, or items and spells you name, without writing any code. Find it in the trigger editor under the ITEM category, as ITEM_USED.
+- **"Count an item I use"** button in General. Adding an item is quick, with no item IDs or exact names needed:
+  - pick it from a list of the usable items in your bags (with icons),
+  - click "Use an item to add it" and just drink the potion or eat the food,
+  - or start typing and pick from the suggestions. Shift-clicking or dragging an item into the box works too.
+  - Presets count any potion, healthstone, food or drink, flask or elixir, or any consumable. Spells can be named too.
 - **Boss fight and instance recap.** When a boss fight ends, and when you leave a dungeon or raid, chat shows what was added (for example "Boss fight recap: Push-ups x30 reps, Burpees x10 reps") and the workout window opens once you are out of combat. Workouts added during combat no longer announce one by one.
 
 ## 2.2.2

@@ -45,7 +45,7 @@ Bundled in `Libs/` (not fetched at package time): Ace3 (from WoWUIDev/Ace3), Lib
 - **Released:** 2.2.2 (tag pushed 2026-11-22): window footer and height fix, page screenshots. First release meant for the public page.
 - **Previous:** 2.2.1 (`/wob demo`), 2.2.0 (quiet hours; tested in game by Tim), 2.1.0.
 - **Unreleased (committed locally, not pushed):** 2.3.0, set workouts per action, the "I use an item or spell" trigger (`ITEM_USED`), and the boss fight and instance recap. Requested by a user (ordsneakysneaky, 2026-10-09). Needs an in-game test before release.
-- **Tests:** 182 passing (`npm test` in `tests`).
+- **Tests:** 198 passing (`npm test` in `tests`).
 - **Release rule:** only push to `main` together with a release tag, so stray untagged pushes do not create alpha builds on CurseForge.
 
 ## Open work
