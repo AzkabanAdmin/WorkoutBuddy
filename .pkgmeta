@@ -1,0 +1,22 @@
+# CurseForge automatic packaging
+# https://support.curseforge.com/support/solutions/articles/9000197281-automatic-packaging
+#
+# Push a tag to publish: "2.1.0" makes a release, "2.1.1-beta1" a beta,
+# "2.1.1-alpha1" an alpha. The tag name replaces @project-version@ in the TOC.
+# Files starting with a dot (like this one) are never packaged.
+
+package-as: WorkoutBuddy
+
+# Libraries are committed in Libs/, so there is no separate no-lib zip.
+enable-nolib-creation: no
+
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
+
+ignore:
+    - README.md
+    - CHANGELOG.md
+    - CLAUDE.md
+    - tests
+    - scripts

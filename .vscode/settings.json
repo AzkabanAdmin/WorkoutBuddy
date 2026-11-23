@@ -1,0 +1,41 @@
+{
+    "Lua.runtime.version": "Lua 5.1",
+    "Lua.runtime.builtin": {
+        "io": "disable",
+        "os": "disable",
+        "package": "disable",
+        "debug": "disable",
+        "utf8": "disable"
+    },
+    "Lua.workspace.ignoreDir": [
+        "tests",
+        "Libs"
+    ],
+    "Lua.diagnostics.globals": [
+        "WorkoutBuddy",
+        "issecretvalue",
+        "C_EventUtils",
+        "C_AddOns",
+        "AddonCompartmentFrame",
+        "GetLFGMode",
+        "GetMaxBattlefieldID",
+        "BackdropTemplateMixin",
+        "CopyTable",
+        "SOUNDKIT",
+        "StaticPopup_Show",
+        "StaticPopupDialogs",
+        "CLOSE",
+        "GameTooltip",
+        "UISpecialFrames",
+        "UIParent",
+        "CreateColor",
+        "OKAY",
+        "CANCEL"
+    ],
+    "Lua.diagnostics.disable": [
+        "assign-type-mismatch",
+        "inject-field",
+        "undefined-field",
+        "need-check-nil"
+    ]
+}

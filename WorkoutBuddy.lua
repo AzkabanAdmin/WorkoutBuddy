@@ -1,261 +1,433 @@
-local addonName, WorkoutBuddy = ...
-local AceDBOptions = LibStub("AceDBOptions-3.0")
-WorkoutBuddy = LibStub("AceAddon-3.0"):NewAddon(WorkoutBuddy or {}, "WorkoutBuddy", "AceConsole-3.0", "AceEvent-3.0")
-_G.WorkoutBuddy = WorkoutBuddy -- Make it accessible in other files
-if _G.WorkoutBuddy_Sounds then
-    WorkoutBuddy.Sounds = _G.WorkoutBuddy_Sounds
-    _G.WorkoutBuddy_Sounds = nil
+-- WorkoutBuddy.lua
+-- Core: addon object, saved variable defaults, client compatibility helpers,
+-- workout suggestions and slash commands.
+
+local addonName, ns = ...
+
+local WorkoutBuddy = LibStub("AceAddon-3.0"):NewAddon(ns, "WorkoutBuddy", "AceConsole-3.0", "AceEvent-3.0")
+_G.WorkoutBuddy = WorkoutBuddy -- global handle for macros and other addons
+
+WorkoutBuddy.ADDON_NAME = addonName
+WorkoutBuddy.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version"))
+    or (GetAddOnMetadata and GetAddOnMetadata(addonName, "Version")) or "dev"
+if WorkoutBuddy.VERSION:find("@", 1, true) then
+    WorkoutBuddy.VERSION = "dev" -- running from the repository without packaging
 end
-if _G.WorkoutBuddy_Hydration then
-    WorkoutBuddy.Hydration = _G.WorkoutBuddy_Hydration
-    _G.WorkoutBuddy_Hydration = nil
-end
+WorkoutBuddy.ICON = "Interface\\Icons\\Spell_Nature_Strength"
 WorkoutBuddy.DEBUG = false
 
--- Utility to copy text to the system clipboard or show a dialog
-function WorkoutBuddy:CopyToClipboard(text)
-    if C_Clipboard and C_Clipboard.SetClipboard then
-        C_Clipboard.SetClipboard(text)
-        self:Print("Link copied to clipboard!")
-    else
-        if not StaticPopupDialogs["WORKOUTBUDDY_COPY"] then
-            StaticPopupDialogs["WORKOUTBUDDY_COPY"] = {
-                text = "Press Ctrl-C to copy:",
-                button1 = CLOSE,
-                hasEditBox = true,
-                editBoxWidth = 350,
-                timeout = 0,
-                whileDead = true,
-                hideOnEscape = true,
-                OnShow = function(popup, data)
-                    popup.editBox:SetText(data or "")
-                    popup.editBox:SetFocus()
-                    popup.editBox:HighlightText()
-                end,
-            }
-        end
-        StaticPopup_Show("WORKOUTBUDDY_COPY", nil, nil, text)
+local DB_VERSION = 2
+
+------------------------------------------------------------------------
+-- Client compatibility helpers
+-- WoW Forever, Midnight (Retail) and Classic Era share most UI code, but
+-- some events and APIs only exist on some clients, and modern clients can
+-- hand addons "secret" values that cannot be compared or used in math.
+------------------------------------------------------------------------
+local probeFrame
+
+--- True if the running client knows this event name.
+function WorkoutBuddy.IsEventValid(event)
+    if type(event) ~= "string" or event == "" or not event:match("^[A-Z0-9_]+$") then
+        return false
     end
+    if C_EventUtils and C_EventUtils.IsEventValid then
+        return C_EventUtils.IsEventValid(event) and true or false
+    end
+    probeFrame = probeFrame or CreateFrame("Frame")
+    local ok = pcall(probeFrame.RegisterEvent, probeFrame, event)
+    if ok then probeFrame:UnregisterEvent(event) end
+    return ok
+end
+
+--- Register an event on a plain frame only if the client supports it.
+function WorkoutBuddy.SafeRegisterEvent(frame, event)
+    if WorkoutBuddy.IsEventValid(event) then
+        frame:RegisterEvent(event)
+        return true
+    end
+    return false
+end
+
+--- True if the value is a secret value that addons may not inspect.
+function WorkoutBuddy.IsSecret(value)
+    local check = _G.issecretvalue
+    return check ~= nil and check(value) == true
+end
+
+--- Current Unix time (server time where available).
+function WorkoutBuddy.Now()
+    return (GetServerTime and GetServerTime()) or time()
+end
+
+--- Unix time of local midnight for the given timestamp (default now).
+function WorkoutBuddy.DayStart(ts)
+    local d = date("*t", ts or WorkoutBuddy.Now())
+    return time({ year = d.year, month = d.month, day = d.day, hour = 0, min = 0, sec = 0 })
+end
+
+--- "YYYY-MM-DD" key in local time.
+function WorkoutBuddy.DayKey(ts)
+    return date("%Y-%m-%d", ts or WorkoutBuddy.Now())
+end
+
+function WorkoutBuddy.InCombat()
+    return (InCombatLockdown and InCombatLockdown()) or (UnitAffectingCombat and UnitAffectingCombat("player") == true)
 end
 
 function WorkoutBuddy:DbgPrint(...)
     if self.DEBUG then
-        print("[WorkoutBuddy]", ...)
+        print("|cFF33FF99[WorkoutBuddy]|r", ...)
     end
 end
 
+function WorkoutBuddy:NotifyConfigChanged()
+    local reg = LibStub("AceConfigRegistry-3.0", true)
+    if reg then reg:NotifyChange("WorkoutBuddy") end
+end
+
+------------------------------------------------------------------------
+-- Copy helper (shows a selectable edit box; addons cannot write the
+-- system clipboard on every client)
+------------------------------------------------------------------------
+function WorkoutBuddy:CopyToClipboard(text)
+    if not StaticPopupDialogs["WORKOUTBUDDY_COPY"] then
+        StaticPopupDialogs["WORKOUTBUDDY_COPY"] = {
+            text = "Press Ctrl-C to copy:",
+            button1 = CLOSE or "Close",
+            hasEditBox = true,
+            editBoxWidth = 350,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+            OnShow = function(popup, data)
+                local box = (popup.GetEditBox and popup:GetEditBox()) or popup.editBox or popup.EditBox
+                if box then
+                    box:SetText(data or popup.data or "")
+                    box:SetFocus()
+                    box:HighlightText()
+                end
+            end,
+            EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
+        }
+    end
+    StaticPopup_Show("WORKOUTBUDDY_COPY", nil, nil, text)
+end
+
+------------------------------------------------------------------------
+-- Saved variables
+------------------------------------------------------------------------
+WorkoutBuddy.DEFAULT_WORKOUTS = {
+    { name = "Stand Up & Stretch", amount = 30, unit = "seconds" },
+    { name = "Push-ups", amount = 10, unit = "reps" },
+    { name = "Sit-ups", amount = 15, unit = "reps" },
+    { name = "Jumping Jacks", amount = 20, unit = "reps" },
+    { name = "Chair Squats", amount = 10, unit = "reps" },
+    { name = "Look Away From Screen", amount = 20, unit = "seconds" },
+}
 
 local defaults = {
     profile = {
-        custom_workouts = {},
+        enabled = true,
+        login_message = true,
+        workouts = nil, -- seeded from DEFAULT_WORKOUTS on first use
+        workouts_seeded = false,
         event_map = {
             levelup = true,
             xpbubble = false,
             zonechange_newarea = false,
             zonechange_zone = false,
             zonechange_indoors = false,
+            boss_kill = true,
+            challenge_complete = true,
+            achievement = false,
+            player_death = false,
+            quest_turnin = false,
+            play_timer = true, -- sedentary break: every N minutes of play
         },
+        play_timer_minutes = 45,
+        suggest_cooldown = 30, -- seconds between automatic suggestions
+        avoid_repeat = true,
+        notify = {
+            chat = true,
+            sound = "None",
+        },
+        daily_goal = 5,
         triggers = {},
         stats = {},
         hydration = {
             enabled = false,
             mode = "smart", -- "smart" uses goals, "interval" is simple minutes
+            unit = "oz",
             total = 32,
             timeframe = 120,
             per = 8,
             interval = 60,
-
             sound = "Alarm Clock",
             scale = 1.2,
-            alpha = 0.9,
-            x = 0,
-            y = 0,
+            alpha = 0.95,
+            auto_hide = 0,
             next_time = 0,
             last_time = 0,
         },
-        -- Reminder frame settings (position, scaling, etc.)
         reminder_frame = {
-            x = 400,
-            y = 500,
-            scale = 1.1,
-            alpha = 0.85,
-            show_when = "rested",
-            sound = 567463,
+            scale = 1.0,
+            alpha = 0.95,
+            width = 340,
+            height = 170,
+            locked = false,
             autocenter = true,
             initialized = false,
         },
-        -- When to automatically open the reminder frame
         reminder_events = {
             taxi = true,
-            rested = true,
+            rested = false,
             quest = true,
             open_empty = false,
+            lfg_queue = true,
+            afk = false,
+            auction_house = false,
+            login = true,
+            defer_combat = true,
         },
-        -- Stored queue of pending workouts
         reminder_queue = {},
-    }
+        minimap = {
+            hide = false,
+            showInCompartment = true,
+        },
+        db_version = 0,
+    },
 }
+WorkoutBuddy.defaults = defaults
 
+local function CopyWorkouts(list)
+    local out = {}
+    for i, w in ipairs(list) do
+        out[i] = { name = w.name, amount = w.amount, unit = w.unit }
+    end
+    return out
+end
+WorkoutBuddy.CopyWorkouts = CopyWorkouts
 
-function WorkoutBuddy:InitDB()
-    if self.db and self.db.profile then return end -- already initialized
-    self.db = LibStub("AceDB-3.0"):New("WorkoutBuddyDB", defaults, true)
+--- Bring older or freshly created profiles up to date.
+function WorkoutBuddy:MigrateProfile()
+    local p = self.db.profile
+
+    -- Seed the starter list once. Users who delete everything keep an empty list.
+    if not p.workouts_seeded then
+        if type(p.workouts) ~= "table" or #p.workouts == 0 then
+            p.workouts = CopyWorkouts(self.DEFAULT_WORKOUTS)
+        end
+        p.workouts_seeded = true
+    end
+    p.workouts = p.workouts or {}
+
+    -- Sanitize workout entries
+    for i = #p.workouts, 1, -1 do
+        local w = p.workouts[i]
+        if type(w) ~= "table" or type(w.name) ~= "string" or w.name == "" then
+            table.remove(p.workouts, i)
+        else
+            w.amount = tonumber(w.amount) or 1
+            w.unit = type(w.unit) == "string" and w.unit or ""
+            w.category = nil
+        end
+    end
+
+    -- Triggers from older versions may lack an options table
+    p.triggers = p.triggers or {}
+    for _, t in ipairs(p.triggers) do
+        t.options = type(t.options) == "table" and t.options or {}
+    end
+
+    -- Fields v1 saved but never used
+    local rf = p.reminder_frame
+    rf.sound, rf.show_when = nil, nil
+    local h = p.hydration
+    if h.x == 0 and h.y == 0 then h.x, h.y = nil, nil end -- v1 default put the popup in a corner
+    h.initialized = nil
+    for _, key in ipairs({ "total", "per", "timeframe", "interval" }) do
+        local n = tonumber(h[key])
+        h[key] = (n and n > 0) and n or defaults.profile.hydration[key] -- invalid values fall back to defaults
+    end
+    if p.daily_goal and p.daily_goal < 0 then p.daily_goal = 0 end
+
+    p.db_version = DB_VERSION
 end
 
+------------------------------------------------------------------------
+-- Lifecycle
+------------------------------------------------------------------------
 function WorkoutBuddy:OnInitialize()
-    self:InitDB()
-    -- ensure new tables exist for older saved variables
-    self.db.profile.triggers = self.db.profile.triggers or {}
-    if WorkoutBuddy.Sounds and WorkoutBuddy.Sounds.Init then
-        WorkoutBuddy.Sounds:Init()
-    end
-    if self.InitMinimapButton then
-        self:InitMinimapButton()
-    end
-    -- If workouts is nil or empty, set defaults
-    if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
-        self.db.profile.workouts = {
-            { name = "Stretch", amount = 30, unit = "seconds" },
-            { name = "Pushups", amount = 10, unit = "reps" },
-            { name = "Sit-ups", amount = 15, unit = "reps" },
-            { name = "Jumping Jacks", amount = 20, unit = "reps" },
-        }
-    end
+    self.db = LibStub("AceDB-3.0"):New("WorkoutBuddyDB", defaults, true)
+    self:MigrateProfile()
+
+    if self.Sounds and self.Sounds.Init then self.Sounds:Init() end
+    self:InitMinimapButton()
     self:InitConfig()
-    if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.Init then
-        WorkoutBuddy.TriggerManager:Init()
-    end
-    WorkoutBuddy.ReminderCore:Init()
+
+    self.TriggerManager:Init()
+    self.ReminderCore:Init()
+    self.ReminderEvents:Register()
+
     self:RegisterChatCommand("workoutbuddy", "HandleSlashCommand")
     self:RegisterChatCommand("wob", "HandleSlashCommand")
-    self:Print("Workout Buddy loaded! Type /workoutbuddy to open settings.")
 
-    -- Listen for AceDB profile events
     self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
     self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
-    self.db.RegisterCallback(self, "OnProfileReset",  "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+end
 
-    if WorkoutBuddy.ReminderEvents then
-        WorkoutBuddy.ReminderEvents:Register()
-    end
+function WorkoutBuddy:OnEnable()
+    self:RegisterBuiltInEvents()
+    self.Hydration:Resume()
+    self:StartPlayTimer()
 
-    if WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
-        WorkoutBuddy.Hydration:Resume()
-    end
-
-    -- Show movable frames the first time a profile is used
-    local rfOpts = WorkoutBuddy.ReminderState.getProfileOpts()
-    if not rfOpts.initialized and WorkoutBuddy.ReminderFrame then
-        WorkoutBuddy.ReminderFrame:Show()
-    end
-    local hydOpts = self.db.profile.hydration
-    if not hydOpts then
-        hydOpts = CopyTable(WorkoutBuddy.Hydration.DEFAULTS)
-        self.db.profile.hydration = hydOpts
-    end
-    if not hydOpts.initialized and WorkoutBuddy.Hydration then
-        WorkoutBuddy.Hydration:ShowPopup(true)
+    if self.db.profile.login_message then
+        self:Print(string.format("v%s loaded. Type |cFFFFD700/wob help|r for commands.", self.VERSION))
     end
 
+    -- First run of a profile: show the frame once so the player can place it
+    local rf = self.db.profile.reminder_frame
+    if not rf.initialized then
+        rf.initialized = true
+        self.ReminderCore:Show()
+    end
+
+    local queue = self.ReminderState.getQueue()
+    if #queue > 0 then self:StartMinimapPulse() end
 end
 
 function WorkoutBuddy:OnProfileChanged()
-    local rfOpts = WorkoutBuddy.ReminderState.getProfileOpts()
-    local rfFirst = not rfOpts.initialized
-    local hydOpts = self.db.profile.hydration
-    if not hydOpts then
-        hydOpts = CopyTable(WorkoutBuddy.Hydration.DEFAULTS)
-        self.db.profile.hydration = hydOpts
-    end
-    local hydFirst = not hydOpts.initialized
-    -- Ensure automation tables exist for old profiles
-    self.db.profile.triggers = self.db.profile.triggers or {}
-    -- Only set defaults if the list is missing or empty
-    if not self.db.profile.workouts or #self.db.profile.workouts == 0 then
-        self.db.profile.workouts = {
-            { name = "Stretch", amount = 30, unit = "seconds" },
-            { name = "Pushups", amount = 10, unit = "reps" },
-            { name = "Sit-ups", amount = 15, unit = "reps" },
-            { name = "Jumping Jacks", amount = 20, unit = "reps" },
-        }
-    end
-    self:RebuildWorkoutListOptions()
-    if WorkoutBuddy.TriggerManager and WorkoutBuddy.TriggerManager.RegisterEvents then
-        WorkoutBuddy.TriggerManager:RegisterEvents()
-    end
+    self:MigrateProfile()
+    self.TriggerManager:RegisterEvents()
+    self.ReminderEvents:Register()
+    self.ReminderCore:OnProfileChanged()
+    self.Hydration:OnProfileChanged()
+    self:StartPlayTimer()
+    self:RefreshMinimapButton()
     self:ForceFullConfigRefresh()
-
-    if WorkoutBuddy.ReminderEvents and WorkoutBuddy.ReminderEvents.Register then
-        WorkoutBuddy.ReminderEvents:Register()
-    end
-
-    if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.OnProfileChanged then
-        WorkoutBuddy.ReminderCore:OnProfileChanged()
-    end
-
-    if WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.OnProfileChanged then
-        WorkoutBuddy.Hydration:OnProfileChanged()
-    elseif WorkoutBuddy.Hydration and WorkoutBuddy.Hydration.Resume then
-        -- Fallback for older versions
-        WorkoutBuddy.Hydration:Resume()
-    end
-
-    if rfFirst and WorkoutBuddy.ReminderFrame then
-        WorkoutBuddy.ReminderFrame:Show()
-    end
-    if hydFirst and WorkoutBuddy.Hydration then
-        WorkoutBuddy.Hydration:ShowPopup(true)
-    end
 end
 
+------------------------------------------------------------------------
+-- Suggestions
+------------------------------------------------------------------------
+function WorkoutBuddy:PickWorkout()
+    local workouts = self.db.profile.workouts or {}
+    local n = #workouts
+    if n == 0 then return nil end
+    local idx = math.random(n)
+    if n > 1 and self.db.profile.avoid_repeat and self.lastWorkoutName then
+        for _ = 1, 4 do
+            if workouts[idx].name ~= self.lastWorkoutName then break end
+            idx = math.random(n)
+        end
+    end
+    return workouts[idx]
+end
 
-function WorkoutBuddy:SuggestWorkout(source)
-    local workouts = self.db.profile.workouts
-    if #workouts == 0 then return end
-    local workout = workouts[math.random(#workouts)]
-    local msg = workout.name or "Workout"
-
-    if workout.amount and workout.amount > 0 then
-        msg = msg .. " - " .. workout.amount
-        if workout.unit and workout.unit ~= "" then
-            msg = msg .. " " .. workout.unit
+--- Add a random workout to the queue.
+-- @param source string  Label for what caused the suggestion.
+-- @param manual boolean Manual requests skip the pause and cooldown checks.
+function WorkoutBuddy:SuggestWorkout(source, manual)
+    local p = self.db.profile
+    if not manual then
+        if not p.enabled then return end
+        local cd = tonumber(p.suggest_cooldown) or 0
+        local now = GetTime()
+        if cd > 0 and self.lastSuggestAt and (now - self.lastSuggestAt) < cd then
+            self:DbgPrint("Suggestion skipped (cooldown):", source)
+            return
         end
     end
 
-    self:DbgPrint("Workout Buddy ("..(source or "Event").."): " .. msg)
+    local workout = self:PickWorkout()
+    if not workout then
+        if manual then self:Print("Your workout list is empty. Add some in /wob > Workouts.") end
+        return
+    end
 
-    -- Add to reminder queue!
-    if WorkoutBuddy.ReminderQueue and WorkoutBuddy.ReminderCore then
-        WorkoutBuddy.ReminderQueue:AddToQueue(workout)
-        WorkoutBuddy.ReminderCore:UpdateDisplay()
-        WorkoutBuddy:StartMinimapPulse()
+    self.lastSuggestAt = GetTime()
+    self.lastWorkoutName = workout.name
+    self.playMinutes = 0 -- any break resets the sedentary timer
+
+    self.ReminderQueue:AddToQueue(workout)
+    self.ReminderCore:UpdateDisplay()
+    if not (self.ReminderFrame and self.ReminderFrame:IsShown()) then
+        self:StartMinimapPulse()
+    end
+
+    if p.notify.chat then
+        self:Print(string.format("|cFFAAFFAA%s|r: %s (%s)",
+            source or "Workout", self:FormatWorkout(workout), "|cFF888888/wob show|r"))
+    end
+    if p.notify.sound and p.notify.sound ~= "None" then
+        self.Sounds:Play(p.notify.sound)
     end
 end
 
--- Helper function to fully refresh the config UI
-function WorkoutBuddy:ForceFullConfigRefresh()
-    -- Rebuild options from current profile and update config UI
-    self:RebuildWorkoutListOptions()
-    self:RebuildCustomEventToggles()
-    local reg = LibStub("AceConfigRegistry-3.0", true)
-    if reg then reg:NotifyChange("WorkoutBuddy") end
-    -- If using AceConfigDialog, close and re-open to force UI to update
-    if InterfaceOptionsFrame then
-        InterfaceOptionsFrame:Hide()
-        C_Timer.After(0.2, function()
-            InterfaceOptionsFrame_OpenToCategory(self.optionsFrame)
-        end)
+function WorkoutBuddy:FormatWorkout(w)
+    local s = w.name or "Workout"
+    if w.amount and tonumber(w.amount) and tonumber(w.amount) > 0 then
+        s = s .. " x" .. tostring(w.amount)
+        if w.unit and w.unit ~= "" then s = s .. " " .. w.unit end
     end
+    return s
 end
+
+function WorkoutBuddy:SetEnabled(on)
+    self.db.profile.enabled = on and true or false
+    self:Print(on and "Automatic workout suggestions |cFF00FF00resumed|r."
+        or "Automatic workout suggestions |cFFFF5555paused|r. Type /wob resume to turn them back on.")
+    self:StartPlayTimer()
+    self:NotifyConfigChanged()
+end
+
+------------------------------------------------------------------------
+-- Slash commands
+------------------------------------------------------------------------
+local HELP = {
+    "|cFFFFD700/wob|r - open settings",
+    "|cFFFFD700/wob show|r - show or hide the workout queue",
+    "|cFFFFD700/wob now|r - get a workout right now",
+    "|cFFFFD700/wob water|r - log a drink of water",
+    "|cFFFFD700/wob stats|r - print today's progress",
+    "|cFFFFD700/wob pause|r / |cFFFFD700resume|r - pause or resume automatic suggestions",
+    "|cFFFFD700/wob center|r - move the workout and hydration frames to the screen center",
+    "|cFFFFD700/wob minimap|r - show or hide the minimap button",
+}
 
 function WorkoutBuddy:HandleSlashCommand(input)
-    input = strtrim(string.lower(input or ""))
-    if input == "center" then
-        if self.ReminderCore and self.ReminderCore.CenterFrame then
-            self.ReminderCore:CenterFrame(true)
-            self:Print("Reminder frame centered.")
-        end
-    else
+    local cmd = strtrim(string.lower(input or ""))
+    if cmd == "" or cmd == "config" or cmd == "options" then
         self:OpenConfig()
+    elseif cmd == "help" or cmd == "?" then
+        self:Print("Commands:")
+        for _, line in ipairs(HELP) do print("  " .. line) end
+    elseif cmd == "show" or cmd == "toggle" then
+        self.ReminderCore:Toggle()
+    elseif cmd == "now" or cmd == "suggest" or cmd == "workout" then
+        self:SuggestWorkout("Requested", true)
+        self.ReminderCore:Show()
+    elseif cmd == "water" or cmd == "drink" then
+        self.Hydration:LogDrink()
+    elseif cmd == "stats" then
+        self:Print(self.Stats:GetTodayLine())
+    elseif cmd == "pause" or cmd == "off" then
+        self:SetEnabled(false)
+    elseif cmd == "resume" or cmd == "on" then
+        self:SetEnabled(true)
+    elseif cmd == "center" or cmd == "reset" then
+        self.ReminderCore:CenterFrame(true)
+        self.Hydration:CenterFrame(true)
+        self:Print("Frames centered.")
+    elseif cmd == "minimap" then
+        self:SetMinimapButtonShown(self.db.profile.minimap.hide)
+    elseif cmd == "debug" then
+        self.DEBUG = not self.DEBUG
+        self:Print("Debug " .. (self.DEBUG and "on" or "off"))
+    else
+        self:Print("Unknown command. Type /wob help")
     end
 end

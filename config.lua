@@ -1,33 +1,31 @@
+-- config.lua
+-- Builds the options tree and registers it with the game's settings panel.
+
+local _, WorkoutBuddy = ...
+
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
-local TriggerManager = WorkoutBuddy and WorkoutBuddy.TriggerManager
 
--- Helper to wrap event toggles in their own inline container
-local function EventBox(order, toggle)
-    return {
-        type = "group",
-        inline = true,
-        name = "",
-        order = order,
-        args = { toggle = toggle },
-    }
-end
+local Tabs = WorkoutBuddy.ConfigTabs
 
 function WorkoutBuddy:InitConfig()
+    local profileTab = AceDBOptions:GetOptionsTable(self.db)
+    profileTab.order = 100
 
     self.options = {
         name = "Workout Buddy",
         handler = WorkoutBuddy,
         type = "group",
+        childGroups = "tab",
         args = {
-            general      = WorkoutBuddy_GeneralTab(),
-            display      = WorkoutBuddy_DisplayTab(),
-            workouts     = WorkoutBuddy_WorkoutsTab(),
-            hydration    = WorkoutBuddy_HydrationTab(),
-            stats        = WorkoutBuddy_StatsTab(),
-            importexport = WorkoutBuddy_ImportExportTab(),
-            profile      = WorkoutBuddy_ProfileTab and WorkoutBuddy_ProfileTab() or AceDBOptions:GetOptionsTable(WorkoutBuddy.db),
+            general      = Tabs.General(),
+            workouts     = Tabs.Workouts(),
+            hydration    = Tabs.Hydration(),
+            display      = Tabs.Display(),
+            stats        = Tabs.Stats(),
+            importexport = Tabs.ImportExport(),
+            profile      = profileTab,
         },
     }
 
@@ -35,57 +33,97 @@ function WorkoutBuddy:InitConfig()
     self:RebuildCustomEventToggles()
 
     AceConfig:RegisterOptionsTable("WorkoutBuddy", self.options)
+    AceConfigDialog:SetDefaultSize("WorkoutBuddy", 760, 640)
     self.optionsFrame = AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Workout Buddy")
-    AceConfigDialog:AddToBlizOptions("WorkoutBuddy", "Profiles", "Workout Buddy", "profile")
 end
 
+function WorkoutBuddy:OpenConfig()
+    if AceConfigDialog.OpenFrames and AceConfigDialog.OpenFrames["WorkoutBuddy"] then
+        AceConfigDialog:Close("WorkoutBuddy")
+    else
+        AceConfigDialog:Open("WorkoutBuddy")
+    end
+end
+
+function WorkoutBuddy:ForceFullConfigRefresh()
+    if not self.options then return end
+    self:RebuildWorkoutListOptions()
+    self:RebuildCustomEventToggles()
+    self:NotifyConfigChanged()
+end
+
+------------------------------------------------------------------------
+-- Workout list (one inline group per workout)
+------------------------------------------------------------------------
 function WorkoutBuddy:RebuildWorkoutListOptions()
+    if not self.options then return end
     local args = self.options.args.workouts.args.workoutList.args
     wipe(args)
-    local workouts = self.db and self.db.profile and self.db.profile.workouts or {}
+    local workouts = self.db.profile.workouts or {}
+
+    if #workouts == 0 then
+        args.empty = {
+            type = "description",
+            name = "|cFF888888Your list is empty. Add a workout below or pick some from the library.|r",
+            order = 1,
+        }
+        return
+    end
 
     for i, workout in ipairs(workouts) do
-        args["box" .. i] = {
+        args["w" .. i] = {
             type = "group",
-            name = workout.name or ("Workout " .. i),
-            inline = false,
+            name = "",
+            inline = true,
             order = i,
             args = {
-                workoutAmount = {
+                name = {
+                    type = "input",
+                    name = "Workout",
+                    order = 1,
+                    width = 1.3,
+                    get = function() return workout.name or "" end,
+                    set = function(_, val)
+                        val = strtrim(val or "")
+                        if val ~= "" then workout.name = val end
+                    end,
+                },
+                amount = {
                     type = "input",
                     name = "Amount",
-                    desc = "How many? (e.g., reps, oz, seconds)",
-                    order = 1,
-                    width = 0.6,
+                    order = 2,
+                    width = 0.5,
                     get = function() return tostring(workout.amount or "") end,
-                    set = function(info, val) workout.amount = tonumber(val) or workout.amount end,
+                    set = function(_, val) workout.amount = tonumber(val) or workout.amount end,
+                    validate = function(_, val)
+                        local n = tonumber(val)
+                        if not n or n < 0 then return "Enter a number of 0 or more." end
+                        return true
+                    end,
                 },
-                workoutUnit = {
+                unit = {
                     type = "input",
                     name = "Unit",
-                    desc = "Unit (optional)",
-                    order = 2,
-                    width = 0.7,
+                    desc = "For example reps, seconds or minutes. Optional.",
+                    order = 3,
+                    width = 0.6,
                     get = function() return workout.unit or "" end,
-                    set = function(info, val) workout.unit = val end,
+                    set = function(_, val) workout.unit = strtrim(val or "") end,
                 },
-                removeBtn = {
+                remove = {
                     type = "execute",
                     name = "Remove",
-                    order = 3,
-                    width = 0.7,
-                    confirm = true,
-                    confirmText = "Remove workout '" .. (workout.name or "") .. "'?",
+                    order = 4,
+                    width = 0.5,
                     func = function()
-                        local newList = {}
-                        for idx, w in ipairs(workouts) do
-                            if idx ~= i then
-                                table.insert(newList, w)
+                        for idx, w in ipairs(self.db.profile.workouts) do
+                            if w == workout then
+                                table.remove(self.db.profile.workouts, idx)
+                                break
                             end
                         end
-                        self.db.profile.workouts = newList
-                        WorkoutBuddy:RebuildWorkoutListOptions()
-                        AceConfigDialog:SelectGroup("WorkoutBuddy", "workouts")
+                        self:RebuildWorkoutListOptions()
+                        self:NotifyConfigChanged()
                     end,
                 },
             },
@@ -93,67 +131,78 @@ function WorkoutBuddy:RebuildWorkoutListOptions()
     end
 end
 
-
--- Build checkboxes for custom triggers in the General tab
+------------------------------------------------------------------------
+-- Custom trigger rows in the General tab
+------------------------------------------------------------------------
 function WorkoutBuddy:RebuildCustomEventToggles()
-    if not self.options or not self.options.args.general then return end
-    local actArgs = self.options.args.general.args.eventTriggers.args
-    local openArgs = self.options.args.general.args.openEvents.args
+    if not self.options then return end
+    local general = self.options.args.general.args
+    local actArgs = general.customTriggers.args
+    local openArgs = general.customOpen.args
+    wipe(actArgs)
+    wipe(openArgs)
 
-    -- remove old entries
-    for k in pairs(actArgs) do
-        if k:match("^custom") then actArgs[k] = nil end
-    end
-    for k in pairs(openArgs) do
-        if k:match("^custom") then openArgs[k] = nil end
-    end
-
-    local triggers = self.db and self.db.profile and self.db.profile.triggers or {}
-    local aIdx, oIdx = 10, 10
+    local triggers = self.db.profile.triggers or {}
+    local counts = { workout = 0, open_frame = 0 }
     for id, c in ipairs(triggers) do
-        local target = (c.action == "open_frame") and openArgs or actArgs
-        local idx = (c.action == "open_frame") and oIdx or aIdx
-        local key = "custom" .. id
-        target[key] = EventBox(idx, {
-            type = "toggle",
-            name = c.name or ("Custom " .. id),
-            desc = WorkoutBuddy.TriggerManager.EventHelp[c.event] or nil,
-            width = 0.8,
-            order = 1,
-            get = function() return c.enabled ~= false end,
-            set = function(info, val) c.enabled = val end,
-        })
-        target[key].args.edit = {
-            type = "execute",
+        local isOpen = c.action == "open_frame"
+        local target = isOpen and openArgs or actArgs
+        local kind = isOpen and "open_frame" or "workout"
+        counts[kind] = counts[kind] + 1
+        local evt = self.TriggerManager.TriggerEvent(c) or "?"
+        local label = (c.name and c.name ~= "") and c.name or evt
+        if c.imported then label = label .. " |cFFFF8800(imported, review to enable)|r" end
+
+        target["t" .. id] = {
+            type = "group",
             name = "",
-            image = "Interface\\Buttons\\UI-GuildButton-PublicNote-Up",
-            imageWidth = 16,
-            imageHeight = 16,
-            width = 0.1,
-            order = 1.1,
-            func = function() WorkoutBuddy:OpenTriggerEditor(nil, id) end,
+            inline = true,
+            order = id,
+            args = {
+                toggle = {
+                    type = "toggle",
+                    name = label,
+                    desc = string.format("Event: %s\n%s", evt, self.EventHelp[evt] or ""),
+                    width = 1.8,
+                    order = 1,
+                    disabled = function() return c.imported end,
+                    get = function() return c.enabled ~= false end,
+                    set = function(_, val)
+                        c.enabled = val
+                        self.TriggerManager:RegisterEvents()
+                    end,
+                },
+                edit = {
+                    type = "execute",
+                    name = "Edit",
+                    width = 0.4,
+                    order = 2,
+                    func = function() self:OpenTriggerEditor(nil, id) end,
+                },
+                del = {
+                    type = "execute",
+                    name = "Delete",
+                    width = 0.45,
+                    order = 3,
+                    confirm = true,
+                    confirmText = "Delete trigger '" .. label .. "'?",
+                    func = function()
+                        table.remove(triggers, id)
+                        self.TriggerManager:Reset()
+                        self:RebuildCustomEventToggles()
+                        self:NotifyConfigChanged()
+                    end,
+                },
+            },
         }
-        target[key].args.del = {
-            type = "execute",
-            name = "",
-            image = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",
-            imageWidth = 16,
-            imageHeight = 16,
-            width = 0.1,
-            order = 1.2,
-            confirm = true,
-            confirmText = "Delete trigger '" .. (c.name or "Custom" .. id) .. "'?",
-            func = function()
-                table.remove(triggers, id)
-                WorkoutBuddy.TriggerManager:RegisterEvents()
-                WorkoutBuddy:RebuildCustomEventToggles()
-            end,
-        }
-        if c.action == "open_frame" then oIdx = oIdx + 1 else aIdx = aIdx + 1 end
+    end
+
+    if counts.workout == 0 then
+        actArgs.none = { type = "description", order = 1,
+            name = "|cFF888888No custom triggers yet. Add one to suggest a workout on any game event.|r" }
+    end
+    if counts.open_frame == 0 then
+        openArgs.none = { type = "description", order = 1,
+            name = "|cFF888888No custom auto-open events yet.|r" }
     end
 end
-
-function WorkoutBuddy:OpenConfig(input)
-    AceConfigDialog:Open("WorkoutBuddy")
-end
-

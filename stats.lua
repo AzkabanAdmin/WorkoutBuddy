@@ -1,101 +1,223 @@
-local WorkoutBuddy = WorkoutBuddy
+-- stats.lua
+-- Records completed workouts and water, and summarizes them.
+
+local _, WorkoutBuddy = ...
 
 local Stats = {}
+WorkoutBuddy.Stats = Stats
 
-local function timeNow()
+local DAY = 86400
 
-    -- Use WoW API if available, otherwise fall back to Lua's os.time()
-    return (GetServerTime and GetServerTime()) or os.time()
-end
-
-function Stats:AddRecord(name, amount, unit, partial)
-    if not WorkoutBuddy.db or not WorkoutBuddy.db.profile then return end
-    WorkoutBuddy.db.profile.stats = WorkoutBuddy.db.profile.stats or {}
-    table.insert(WorkoutBuddy.db.profile.stats, {
-        activity = name,
-        amount = amount,
-        unit = unit,
-        partial = partial,
-        timestamp = timeNow(),
-    })
-
-    local reg = LibStub and LibStub("AceConfigRegistry-3.0", true)
-    if reg then reg:NotifyChange("WorkoutBuddy") end
+local function profile()
+    return WorkoutBuddy.db and WorkoutBuddy.db.profile
 end
 
 function Stats:GetRecords()
-    if not WorkoutBuddy.db or not WorkoutBuddy.db.profile then return {} end
-    return WorkoutBuddy.db.profile.stats or {}
+    local p = profile()
+    if not p then return {} end
+    p.stats = p.stats or {}
+    return p.stats
 end
 
-local function filterRecords(records, timeframe)
-    if timeframe == "lifetime" or not timeframe then return records end
+local function isWater(r)
+    return r.kind == "water"
+end
 
-    local now = timeNow()
-    local start
+--- Log a workout (full or partial).
+function Stats:AddRecord(name, amount, unit, partial)
+    if not profile() then return end
+    local before = self:GetTodayCount()
+    table.insert(self:GetRecords(), {
+        activity = name,
+        amount = tonumber(amount) or 0,
+        unit = unit,
+        partial = partial and true or nil,
+        timestamp = WorkoutBuddy.Now(),
+    })
+    local goal = profile().daily_goal or 0
+    if goal > 0 and before < goal and self:GetTodayCount() >= goal then
+        WorkoutBuddy:Print(string.format("|cFF00FF00Daily goal reached!|r %d workouts today. Streak: %d day(s).",
+            self:GetTodayCount(), self:GetStreak()))
+    end
+    WorkoutBuddy:NotifyConfigChanged()
+end
 
+--- Log a drink of water.
+function Stats:AddWater(amount, unit)
+    if not profile() then return end
+    table.insert(self:GetRecords(), {
+        kind = "water",
+        activity = "Water",
+        amount = tonumber(amount) or 0,
+        unit = unit,
+        timestamp = WorkoutBuddy.Now(),
+    })
+    WorkoutBuddy:NotifyConfigChanged()
+end
+
+function Stats:Reset()
+    local p = profile()
+    if p then p.stats = {} end
+    WorkoutBuddy:NotifyConfigChanged()
+end
+
+------------------------------------------------------------------------
+-- Time frames
+------------------------------------------------------------------------
+local UNIT_SECONDS = {
+    minute = 60, minutes = 60, min = 60, mins = 60, m = 60,
+    hour = 3600, hours = 3600, hr = 3600, hrs = 3600, h = 3600,
+    day = DAY, days = DAY, d = DAY,
+    week = 7 * DAY, weeks = 7 * DAY, w = 7 * DAY,
+    month = 30 * DAY, months = 30 * DAY,
+}
+
+--- Start timestamp for a time frame, or nil for lifetime.
+function Stats:GetStart(timeframe)
+    local now = WorkoutBuddy.Now()
+    if not timeframe or timeframe == "lifetime" then return nil end
     if timeframe == "day" then
-        start = now - 86400
+        return WorkoutBuddy.DayStart(now)
     elseif timeframe == "week" then
-        start = now - 7 * 86400
+        -- Weeks start on Monday
+        local d = date("*t", now)
+        local sinceMonday = (d.wday + 5) % 7
+        return WorkoutBuddy.DayStart(now) - sinceMonday * DAY
     elseif timeframe == "month" then
-        local d = date("!*t", now)
-        d.day, d.hour, d.min, d.sec = 1, 0, 0, 0
-        start = time(d)
-    else
-        -- Allow custom strings like '2days', '3weeks', '4hours', etc.
-        local num, unit = timeframe:match("^(%d+)%s*(%a+)$")
-        num = tonumber(num)
-        unit = unit and unit:lower()
-        if num and unit then
-            local secondsPer = {
-                minute = 60, minutes = 60,
-                hour = 3600, hours = 3600,
-                day = 86400, days = 86400,
-                week = 7 * 86400, weeks = 7 * 86400,
-                month = 30 * 86400, months = 30 * 86400,
-            }
-            local sec = secondsPer[unit]
-            if sec then
-                start = now - num * sec
+        local d = date("*t", now)
+        return time({ year = d.year, month = d.month, day = 1, hour = 0, min = 0, sec = 0 })
+    end
+    local num, unit = tostring(timeframe):lower():match("^%s*(%d+)%s*(%a+)%s*$")
+    num = tonumber(num)
+    if num and unit and UNIT_SECONDS[unit] then
+        return now - num * UNIT_SECONDS[unit]
+    end
+    return nil, true -- invalid custom string
+end
+
+------------------------------------------------------------------------
+-- Summaries
+------------------------------------------------------------------------
+function Stats:GetTodayCount()
+    local start = WorkoutBuddy.DayStart()
+    local n = 0
+    local recs = self:GetRecords()
+    for i = #recs, 1, -1 do
+        local r = recs[i]
+        if (r.timestamp or 0) < start then break end -- records are appended in time order
+        if not isWater(r) then n = n + 1 end
+    end
+    return n
+end
+
+function Stats:GetTodayWater()
+    local start = WorkoutBuddy.DayStart()
+    local total, unit = 0, nil
+    local recs = self:GetRecords()
+    for i = #recs, 1, -1 do
+        local r = recs[i]
+        if (r.timestamp or 0) < start then break end
+        if isWater(r) then
+            total = total + (r.amount or 0)
+            unit = unit or r.unit
+        end
+    end
+    return total, unit
+end
+
+--- Consecutive days (ending today, or yesterday if nothing logged yet today)
+-- with at least one workout.
+function Stats:GetStreak()
+    local days = {}
+    for _, r in ipairs(self:GetRecords()) do
+        if not isWater(r) and r.timestamp then
+            days[WorkoutBuddy.DayKey(r.timestamp)] = true
+        end
+    end
+    local t = WorkoutBuddy.DayStart() + 12 * 3600 -- noon avoids DST edge cases
+    if not days[WorkoutBuddy.DayKey(t)] then t = t - DAY end
+    local streak = 0
+    while days[WorkoutBuddy.DayKey(t)] do
+        streak = streak + 1
+        t = t - DAY
+    end
+    return streak
+end
+
+function Stats:GetTodayLine()
+    local goal = profile() and profile().daily_goal or 0
+    local count = self:GetTodayCount()
+    local line = goal > 0 and string.format("Today: %d / %d workouts", count, goal)
+        or string.format("Today: %d workouts", count)
+    line = line .. string.format(", streak %d day(s)", self:GetStreak())
+    local water, unit = self:GetTodayWater()
+    if water > 0 then
+        line = line .. string.format(", water %d %s", water, unit or "")
+    end
+    return line
+end
+
+function Stats:GetSummary(timeframe)
+    local start, invalid = self:GetStart(timeframe)
+    if invalid then
+        return "|cFFFF5555Could not read that range.|r Try something like 3days, 2weeks or 90minutes."
+    end
+
+    local total, partials, water, waterUnit = 0, 0, 0, nil
+    local byActivity, order = {}, {}
+    local activeDays = {}
+
+    for _, r in ipairs(self:GetRecords()) do
+        if not start or (r.timestamp or 0) >= start then
+            if isWater(r) then
+                water = water + (r.amount or 0)
+                waterUnit = waterUnit or r.unit
+            else
+                total = total + 1
+                if r.partial then partials = partials + 1 end
+                activeDays[WorkoutBuddy.DayKey(r.timestamp or 0)] = true
+                local key = r.activity or "?"
+                if not byActivity[key] then
+                    byActivity[key] = { amount = 0, unit = r.unit, sessions = 0 }
+                    order[#order + 1] = key
+                end
+                local a = byActivity[key]
+                a.amount = a.amount + (r.amount or 0)
+                a.sessions = a.sessions + 1
+                if r.unit and r.unit ~= "" then a.unit = r.unit end
             end
         end
     end
 
-    if not start then return records end
-
-    local out = {}
-    for _, r in ipairs(records) do
-        if (r.timestamp or 0) >= start then
-            table.insert(out, r)
+    table.sort(order, function(a, b)
+        if byActivity[a].sessions ~= byActivity[b].sessions then
+            return byActivity[a].sessions > byActivity[b].sessions
         end
+        return a < b
+    end)
+
+    local days = 0
+    for _ in pairs(activeDays) do days = days + 1 end
+
+    local lines = {
+        string.format("|cFFFFD700Workouts logged:|r %d  |cFF888888(%d partial)|r", total, partials),
+        string.format("|cFFFFD700Active days:|r %d", days),
+    }
+    if water > 0 then
+        lines[#lines + 1] = string.format("|cFF66BBFFWater:|r %d %s", water, waterUnit or "")
     end
-    return out
-end
-
-function Stats:GetSummary(timeframe)
-    local recs = filterRecords(self:GetRecords(), timeframe)
-    local total = 0
-    local byActivity = {}
-
-    for _, r in ipairs(recs) do
-        total = total + 1
-        local key = r.activity
-        byActivity[key] = byActivity[key] or { amount = 0, unit = r.unit }
-        byActivity[key].amount = byActivity[key].amount + (r.amount or 0)
-        if r.unit and r.unit ~= "" then
-            byActivity[key].unit = r.unit
+    if #order > 0 then
+        lines[#lines + 1] = " "
+        lines[#lines + 1] = "|cFFFFD700By activity|r"
+        for _, act in ipairs(order) do
+            local a = byActivity[act]
+            local unitStr = (a.unit and a.unit ~= "") and (" " .. a.unit) or ""
+            lines[#lines + 1] = string.format("  %s: |cFFFFFFFF%s%s|r in %d session(s)",
+                act, tostring(a.amount), unitStr, a.sessions)
         end
+    else
+        lines[#lines + 1] = " "
+        lines[#lines + 1] = "|cFF888888Nothing logged in this period yet. Complete a workout from the reminder frame to start tracking.|r"
     end
-
-    local lines = { string.format("Total Workouts: %d", total) }
-    for act, info in pairs(byActivity) do
-        local unitStr = info.unit and info.unit ~= "" and (" " .. info.unit) or ""
-        table.insert(lines, string.format("%s: %d%s", act, info.amount, unitStr))
-    end
-
     return table.concat(lines, "\n")
 end
-
-WorkoutBuddy.Stats = Stats
-return Stats

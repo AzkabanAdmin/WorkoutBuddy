@@ -1,115 +1,98 @@
 # Workout Buddy
 
-*Workout Buddy* is a World of Warcraft addon that reminds players to perform short exercises during gameplay. It uses the Ace3 framework for addon structure, configuration UI, and event handling.
+A World of Warcraft addon that turns moments in the game into short exercise, stretch and water breaks. Level up, kill a boss, sit in a queue or simply play for 45 minutes, and Workout Buddy adds a quick workout to a small queue window. Tick it off when you have done it and watch your daily goal and streak grow.
 
----
+Works on **WoW Forever**, **Midnight (Retail)** and **Classic Era** from the same download.
 
-## Overview
+## Features
 
-Workout Buddy helps players stay active by suggesting quick exercises at intervals triggered by in-game events. The codebase is modular, making it easy to extend and maintain.
+- **Workout triggers:** level up, XP bubbles, boss kills, Mythic+ completions, quest turn-ins, achievements, deaths, zone changes and a play-time break timer. Options a game client does not support are hidden automatically.
+- **Custom triggers:** pick any game event, add health or rest-area conditions, or write a short Lua condition.
+- **Queue window:** mark workouts done, log part of one, or skip it. Opens by itself during downtime (flights, queues, quest turn-ins, going AFK) and never in the middle of combat.
+- **Hydration reminders:** goal-based or fixed interval, ounces or milliliters, with one-click logging.
+- **Stats:** daily goal, streaks, active days, totals per activity and water, by day, week, month, all time or a custom range.
+- **Workout library:** desk-friendly cardio, stretching, posture, strength, eye and breathing exercises, and healthy habits.
+- **Profiles and sharing:** per-character or shared profiles, plus import and export of workout lists and whole profiles.
 
----
+## Commands
 
-## Main Components
+| Command | What it does |
+| --- | --- |
+| `/wob` | Open settings |
+| `/wob show` | Show or hide the workout queue |
+| `/wob now` | Get a workout right now |
+| `/wob water` | Log a drink of water |
+| `/wob stats` | Print today's progress |
+| `/wob pause`, `/wob resume` | Pause or resume automatic suggestions |
+| `/wob center` | Move the windows back to the middle of the screen |
+| `/wob minimap` | Show or hide the minimap button |
 
-### `WorkoutBuddy.lua`
-- Registers the addon with AceAddon.
-- Initializes the saved database (`WorkoutBuddyDB`) and debug printing.
-- Registers slash commands.
-- `/wob center` can be used to reset the reminder frame to the middle of the screen.
-- Sets up default workouts on first launch.
-- Initializes the minimap button, configuration UI, and the reminder system.
+Minimap button: left-click toggles the queue, shift-click gives a workout now, right-click opens settings.
 
-### `events.lua`
-- Handles core WoW events such as leveling up or changing zones.
-- Triggers workout suggestions via `WorkoutBuddy:SuggestWorkout` based on player settings.
-- Tracks XP bubbles to trigger reminders.
+## Installing manually
 
-### `reminder_frame/`
-Contains several modules:
-- *reminder_core.lua*: Creates/updates the reminder frame, manages the exercise queue, and handles user interactions (complete, dismiss, partial).
-- *reminder_queue.lua*: Manages the list of pending workouts (add, subtract, remove).
-- *reminder_state.lua*: Stores frame settings and the queue in saved variables.
-- *reminder_events.lua*: Decides when to show the reminder frame based on various gameplay events (e.g., taxi rides, quests).
+Extract the zip so the folder `WorkoutBuddy` sits inside your game's AddOns folder, for example:
 
----
+- WoW Forever: `World of Warcraft\_forever_\Interface\AddOns\WorkoutBuddy`
+- Midnight (Retail): `World of Warcraft\_retail_\Interface\AddOns\WorkoutBuddy`
+- Classic Era: `World of Warcraft\_classic_era_\Interface\AddOns\WorkoutBuddy`
 
-## Configuration System
+## For developers
 
-- *config.lua*: Builds the AceConfig options tree and registers it with WoW’s interface options.
-- *Tab modules in `config/`:*
-    - *general.lua*: Toggle which events trigger workouts.
-    - *workouts.lua*: View, add, or remove workouts; quick-add from a predefined library.
-    - *importexport.lua*: Export or import your workout list or entire profile using serialized strings. Includes `SerializeWorkouts`, `DeserializeWorkouts`, `SerializeProfile`, and `DeserializeProfile` helpers.
+### Layout
 
----
+| File | Purpose |
+| --- | --- |
+| `WorkoutBuddy.lua` | Addon object, saved-variable defaults and migration, client compatibility helpers, suggestions, slash commands |
+| `events.lua` | Built-in workout triggers and the play-time timer |
+| `trigger_manager.lua` | Custom triggers (the only place they are dispatched from) |
+| `wow_events.lua` | Event catalog and help text for the trigger editor |
+| `stats.lua` | Workout and water history, summaries, goal and streak |
+| `hydration.lua` | Hydration timer and popup |
+| `Sounds.lua` | Sound registration through LibSharedMedia |
+| `reminder_frame/` | Queue window: state, queue, auto-open events, UI |
+| `config.lua`, `config/` | Options tabs (AceConfig) and the trigger editor |
+| `minimap_button.lua` | LibDataBroker launcher, minimap button, addon compartment |
 
-## Minimap Button
+### Client compatibility rules
 
-- *minimap_button.lua*: Implements a LibDataBroker launcher that toggles the reminder frame or opens settings from the minimap.
-- Pulses to indicate pending workouts.
+- Register events only through `WorkoutBuddy.SafeRegisterEvent` or after `WorkoutBuddy.IsEventValid`, because each client has a different event set and registering an unknown event is an error.
+- Check values from unit APIs with `WorkoutBuddy.IsSecret` before comparing them or doing math. Modern clients (Forever and Midnight) can return secret values.
+- Use `C_AddOns`, `C_Timer` and other namespaced APIs, with fallbacks where a client may lack them.
 
----
+### Tests
 
-## Workout Library
+The `tests` folder runs the addon in a Lua VM with a mocked game client (no game needed). It needs Node.js.
 
-- *config/workout_library.lua*: Curated list of example exercises, categorized by type. Used for quick-add functionality.
+```
+cd tests
+npm install
+npm test
+```
 
----
+`npm test` checks Lua syntax, verifies every file the TOC loads exists, loads the addon with all libraries, fires game events, and exercises suggestions, triggers, hydration, stats, imports, options and slash commands, plus an upgrade from older saved data.
 
-## Addon Manifest
+### Releasing
 
-- *WorkoutBuddy.toc*: Lists files in load order and declares the saved variable `WorkoutBuddyDB`.
+Releases are built by CurseForge's automatic packager from this repository (see `.pkgmeta`).
 
----
+1. Update `CHANGELOG.md`.
+2. Commit and push to `main`.
+3. Tag the commit and push the tag:
 
-## Important Concepts
+   ```
+   git tag 2.1.0
+   git push origin 2.1.0
+   ```
 
-- **Global Table:** Exposes the `WorkoutBuddy` table globally for submodules to attach functionality.
-- **Saved Variables:** User preferences and workout lists are stored in `WorkoutBuddyDB` (via AceDB), with profile support.
-- **Reminder Queue:** Workouts accumulate in a queue. The reminder frame shows the queue and allows marking workouts as complete, partially complete, or dismissed.
-- **Event-Driven:** Game events (e.g., `PLAYER_LEVEL_UP`, zone changes) and custom events in `reminder_events.lua` trigger suggestions and reminder displays.
+   A tag containing `beta` (for example `2.1.1-beta1`) publishes a beta, and one containing `alpha` publishes an alpha. The tag becomes the addon's version number.
 
----
+To build an installable zip on your own machine (for a manual upload or local testing), run `python scripts/build_zip.py 2.1.0`. It follows the same rules as `.pkgmeta` and writes `dist/WorkoutBuddy-2.1.0.zip`.
 
-## Learning More
+The TOC's `## Interface` line lists every client the addon supports (`16001` Forever, `120105` and `120107` Midnight, `11509` Classic Era). Update it when a game patch changes the interface number.
 
-- **Ace3 Framework:**  
-  See the [Ace3 documentation](https://www.wowace.com/projects/ace3), especially AceAddon, AceDB, and AceConfig.
+## License
 
-- **WoW Widget API:**  
-  Check out [WoW Widget API](https://wowpedia.fandom.com/wiki/Widget_API) for frame creation and UI scripting, as used in `reminder_core.lua`.
+Workout Buddy is free to use, modify and share under the MIT License (see `LICENSE`). The bundled libraries in `Libs/` keep their own licenses.
 
-- **SavedVariables & Profiles:**  
-  Study how `LibStub("AceDB-3.0")` manages persistent data. The defaults table in `WorkoutBuddy.lua` shows the initial setup.
-
-- **Addon Packaging:**  
-  Review `WorkoutBuddy.toc` for load order and library embedding. For development, copy the addon directory to your `World of Warcraft/Interface/AddOns/` folder.
-
----
-
-## Adding Events or Workouts
-
-- **To add new triggers:**
-  Modify `events.lua` or `reminder_events.lua`.
-  The trigger editor includes a **Category** dropdown to filter the long list of
-  events. Select a category like `PLAYER` or `CHAT` to limit the events shown in
-  the **Event** dropdown.
-
-
-- **To extend the default workout library:**  
-  Edit `config/workout_library.lua` and ensure the configuration UI can reference new categories.
-
----
-
-## Contribution Guide
-
-The codebase maintains a clear separation between gameplay event handling, configuration, and the reminder display.
-
-**New contributors:**  
-- Start with `WorkoutBuddy.lua` to see module initialization.
-- Explore related files as needed for deeper understanding.
-
----
-
-*Happy adventuring—and don’t forget to stretch!*
+Contributions and bug reports are welcome through GitHub issues and pull requests.

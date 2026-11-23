@@ -1,92 +1,90 @@
-local LDB = LibStub("LibDataBroker-1.1"):NewDataObject("WorkoutBuddy", {
+-- minimap_button.lua
+-- LibDataBroker launcher, minimap button and addon compartment entry.
+
+local _, WorkoutBuddy = ...
+
+local DBIcon = LibStub("LibDBIcon-1.0")
+local NAME = "WorkoutBuddy"
+
+local dataObject = LibStub("LibDataBroker-1.1"):NewDataObject(NAME, {
     type = "launcher",
     text = "Workout Buddy",
-    icon = "Interface\\Icons\\Spell_Nature_Strength",
+    icon = WorkoutBuddy.ICON,
 
-    OnClick = function(self, button)
-        if button == "LeftButton" then
-            -- Ensure frame exists
-            if not WorkoutBuddy.ReminderFrame then
-                if WorkoutBuddy.ReminderCore then
-                    WorkoutBuddy.ReminderCore:CreateOrUpdateFrame()
-                end
-            end
-
-            -- Always update display before toggling
-            if WorkoutBuddy.ReminderCore then
-                WorkoutBuddy.ReminderCore:UpdateDisplay()
-            end
-
-            if WorkoutBuddy.ReminderFrame then
-                if WorkoutBuddy.ReminderFrame:IsShown() then
-                    WorkoutBuddy:DbgPrint("Hiding frame")
-                    WorkoutBuddy.ReminderFrame:Hide()
-                else
-                    WorkoutBuddy:DbgPrint("Showing frame")
-                    WorkoutBuddy.ReminderFrame:Show()
-                    WorkoutBuddy:StopMinimapPulse()
-                    -- Ensure UI is refreshed on show
-                    if WorkoutBuddy.ReminderCore then
-                        WorkoutBuddy.ReminderCore:UpdateDisplay()
-                    end
-                end
-            end
-
-        elseif button == "RightButton" then
-            if WorkoutBuddy.OpenConfig then
-                WorkoutBuddy:OpenConfig()
-            end
+    OnClick = function(_, button)
+        if button == "RightButton" then
+            WorkoutBuddy:OpenConfig()
+        elseif IsShiftKeyDown() then
+            WorkoutBuddy:SuggestWorkout("Requested", true)
+            WorkoutBuddy.ReminderCore:Show()
+        else
+            WorkoutBuddy.ReminderCore:Toggle()
         end
     end,
 
-
-
-
     OnTooltipShow = function(tooltip)
         tooltip:AddLine("Workout Buddy")
+        local queued = WorkoutBuddy.ReminderQueue:Count()
+        tooltip:AddLine(string.format("%d workout(s) waiting", queued), 1, 1, 1)
+        tooltip:AddLine(WorkoutBuddy.Stats:GetTodayLine(), 0.7, 1, 0.7, true)
+        if not WorkoutBuddy.db.profile.enabled then
+            tooltip:AddLine("Automatic suggestions are paused (/wob resume)", 1, 0.4, 0.4, true)
+        end
         tooltip:AddLine(" ")
-        tooltip:AddLine("|cffffff00Left-Click:|r Toggle Workout Buddy Frame")
-        tooltip:AddLine("|cffffff00Right-Click:|r Open Settings")
+        tooltip:AddLine("|cFFFFFF00Left-Click:|r Show or hide the workout queue")
+        tooltip:AddLine("|cFFFFFF00Shift-Click:|r Workout now")
+        tooltip:AddLine("|cFFFFFF00Right-Click:|r Settings")
     end,
 })
 
-local icon = LibStub("LibDBIcon-1.0")
-
--- We'll hook into OnInitialize in the main file. This file only sets up the data object.
 function WorkoutBuddy:InitMinimapButton()
-    icon:Register("WorkoutBuddy", LDB, self.db.profile.minimap)
-    self.minimapIcon = icon
+    if not DBIcon:IsRegistered(NAME) then
+        DBIcon:Register(NAME, dataObject, self.db.profile.minimap)
+    end
 end
 
--- Start pulsing the minimap icon
+function WorkoutBuddy:RefreshMinimapButton()
+    local db = self.db.profile.minimap
+    DBIcon:Refresh(NAME, db)
+    if DBIcon.IsButtonCompartmentAvailable and DBIcon:IsButtonCompartmentAvailable() then
+        if db.showInCompartment then
+            DBIcon:AddButtonToCompartment(NAME)
+        else
+            DBIcon:RemoveButtonFromCompartment(NAME)
+        end
+    end
+end
+
+function WorkoutBuddy:SetMinimapButtonShown(show)
+    self.db.profile.minimap.hide = not show
+    self:RefreshMinimapButton()
+    self:NotifyConfigChanged()
+end
+
+function WorkoutBuddy:SetCompartmentShown(show)
+    self.db.profile.minimap.showInCompartment = show and true or false
+    self:RefreshMinimapButton()
+end
+
+-- Pulse the minimap icon while workouts are waiting.
+local pulse = { ticker = nil, dim = false }
+
 function WorkoutBuddy:StartMinimapPulse()
-    local button = LibStub("LibDBIcon-1.0"):GetMinimapButton("WorkoutBuddy")
-    if not button then return end
-
-    -- If already pulsing, do nothing
-    if button.pulseTicker then return end
-
-    -- Save original alpha if not already saved
-    button.originalAlpha = button.originalAlpha or button:GetAlpha()
-
-    -- Pulse logic: fade in/out
-    button.pulseTicker = C_Timer.NewTicker(0.5, function()
-        if not button:IsShown() then return end
-        local curAlpha = button:GetAlpha()
-        button:SetAlpha(curAlpha < 1 and 1 or 0.4)
+    local button = DBIcon:GetMinimapButton(NAME)
+    if not button or pulse.ticker then return end
+    pulse.ticker = C_Timer.NewTicker(0.6, function()
+        if not button.icon then return end
+        pulse.dim = not pulse.dim
+        button.icon:SetAlpha(pulse.dim and 0.35 or 1)
     end)
 end
 
--- Stop pulsing the minimap icon
 function WorkoutBuddy:StopMinimapPulse()
-    local button = LibStub("LibDBIcon-1.0"):GetMinimapButton("WorkoutBuddy")
-    if not button then return end
-
-    if button.pulseTicker then
-        button.pulseTicker:Cancel()
-        button.pulseTicker = nil
+    if pulse.ticker then
+        pulse.ticker:Cancel()
+        pulse.ticker = nil
     end
-
-    -- Restore original alpha
-    button:SetAlpha(button.originalAlpha or 1)
+    pulse.dim = false
+    local button = DBIcon:GetMinimapButton(NAME)
+    if button and button.icon then button.icon:SetAlpha(1) end
 end

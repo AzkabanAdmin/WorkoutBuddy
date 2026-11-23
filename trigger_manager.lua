@@ -1,163 +1,189 @@
-local WorkoutBuddy = WorkoutBuddy
+-- trigger_manager.lua
+-- Player-defined triggers. Each trigger names an event, optional built-in
+-- options (health threshold, rested state), an optional Lua condition and an
+-- action: "workout" (suggest a workout) or "open_frame" (show the queue).
+--
+-- TriggerManager is the only place custom triggers are dispatched from, so a
+-- trigger fires exactly once per event.
 
---[[
-TriggerManager handles custom triggers defined by users. Each trigger specifies
-an event, an optional Lua condition, and an action (suggest a workout or open the
-reminder frame).
-]]
+local _, WorkoutBuddy = ...
 
 local TriggerManager = {}
+WorkoutBuddy.TriggerManager = TriggerManager
 
--- Helper to see if any workouts are queued
-local function QueueHasItems()
-    local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
-    return q and #q > 0
-end
-local function QueueIsEmpty()
-    local q = WorkoutBuddy.ReminderState and WorkoutBuddy.ReminderState.getQueue()
-    return not q or #q == 0
-end
+-- WoW runs Lua 5.1, where load() only accepts a function. loadstring()
+-- compiles a string.
+local loadstring = loadstring
 
-TriggerManager.EventList = {}
-TriggerManager.EventCategories = {}
-TriggerManager.CategoryOrder = {}
-if WorkoutBuddy_WowEvents then
-    local events = {}
-    for _, evt in ipairs(WorkoutBuddy_WowEvents) do
-        table.insert(events, evt)
-    end
-    table.sort(events)
-    for _, evt in ipairs(events) do
-        local cat = evt:match("^([A-Z]+)_") or "Other"
-        if not TriggerManager.EventCategories[cat] then
-            TriggerManager.EventCategories[cat] = {}
-            table.insert(TriggerManager.CategoryOrder, cat)
+TriggerManager.EventHelp = WorkoutBuddy.EventHelp
+
+------------------------------------------------------------------------
+-- Event catalog for the editor (filtered to what this client supports)
+------------------------------------------------------------------------
+local function CategoryOf(evt)
+    return evt:match("^([A-Z]+)_") or "OTHER"
+end
+TriggerManager.CategoryOf = CategoryOf
+
+function TriggerManager:BuildCatalog()
+    if self.EventCategories then return end
+    self.EventCategories, self.CategoryOrder = {}, {}
+    local seen = {}
+    for _, evt in ipairs(WorkoutBuddy.WowEvents or {}) do
+        if not seen[evt] and WorkoutBuddy.IsEventValid(evt) then
+            seen[evt] = true
+            local cat = CategoryOf(evt)
+            if not self.EventCategories[cat] then
+                self.EventCategories[cat] = {}
+                table.insert(self.CategoryOrder, cat)
+            end
+            table.insert(self.EventCategories[cat], evt)
         end
-        table.insert(TriggerManager.EventCategories[cat], evt)
-        TriggerManager.EventList[evt] = evt
     end
-    for _, list in pairs(TriggerManager.EventCategories) do
-        table.sort(list)
-    end
+    table.sort(self.CategoryOrder)
+    for _, list in pairs(self.EventCategories) do table.sort(list) end
 end
 
--- Fill a dropdown with all categories
-function TriggerManager:FillCategoryDropdown(dropdown)
-    dropdown:SetList(nil)
-    for _, cat in ipairs(self.CategoryOrder) do
-        dropdown:AddItem(cat, cat)
-    end
+------------------------------------------------------------------------
+-- Registration
+------------------------------------------------------------------------
+local function TriggerEvent(t)
+    if t.event == "CUSTOM" then return t.customEvent end
+    return t.event
+end
+TriggerManager.TriggerEvent = TriggerEvent
+
+local function Triggers()
+    local p = WorkoutBuddy.db and WorkoutBuddy.db.profile
+    return p and p.triggers or {}
 end
 
--- Fill a dropdown with events in the given category
-function TriggerManager:FillEventDropdown(dropdown, category)
-    dropdown:SetList(nil)
-    local list = self.EventCategories[category] or {}
-    for _, evt in ipairs(list) do
-        dropdown:AddItem(evt, evt)
-    end
-end
-
-TriggerManager.EventHelp = {
-    PLAYER_LEVEL_UP = "Fires when you gain a level. Example condition: return true",
-    PLAYER_XP_UPDATE = "Your XP changed. Example: return UnitXP('player') % UnitXPMax('player') == 0",
-    UNIT_HEALTH = "Check a unit's health percentage with operators. Uses trigger options.",
-    PLAYER_UPDATE_RESTING = "Args: isResting. Guided field lets you choose resting or not.",
-    PLAYER_REGEN_DISABLED = "You entered combat. Example: return true",
-    PLAYER_REGEN_ENABLED = "You left combat. Example: return true",
-    PLAYER_DEAD = "When you die. Example: return true",
-    PLAYER_ALIVE = "When you resurrect. Example: return true",
-    BAG_UPDATE = "Your bags changed. Example: return true",
-    PLAYER_MONEY = "Money changed. Example: return GetMoney()>0",
-    GOSSIP_SHOW = "NPC gossip opened. Example: return true",
-    PLAYER_TARGET_CHANGED = "Target changed. Example: return UnitIsFriend('player','target')",
-    CHAT_MSG_SAY = "Chat message say. Args: msg. Example: return msg:find('hello')",
-}
-
--- Initialize and register events for all triggers
 function TriggerManager:Init()
+    self.frame = self.frame or CreateFrame("Frame")
+    self.frame:SetScript("OnEvent", function(_, event, ...)
+        self:HandleEvent(event, ...)
+    end)
+    self.compiled = {}
+    self.warned = {}
     self:RegisterEvents()
 end
 
 function TriggerManager:RegisterEvents()
-    if self.frame then
-        self.frame:UnregisterAllEvents()
-    else
-        self.frame = CreateFrame("Frame")
-    end
-
-    local triggers = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.triggers or {}
-    for _, t in ipairs(triggers) do
-        local evt = t.event == "CUSTOM" and t.customEvent or t.event
-        if evt and evt ~= "" then
-            self.frame:RegisterEvent(evt)
+    if not self.frame then return end
+    self.frame:UnregisterAllEvents()
+    for _, t in ipairs(Triggers()) do
+        local evt = TriggerEvent(t)
+        t._lastPass = nil
+        if t.enabled ~= false and evt and evt ~= "" then
+            if not WorkoutBuddy.SafeRegisterEvent(self.frame, evt) then
+                self:WarnOnce("badevent:" .. evt, string.format(
+                    "Trigger '%s' uses the event %s, which this game client does not have. It will not fire.",
+                    t.name ~= "" and t.name or "?", evt))
+            end
         end
     end
-
-    self.frame:SetScript("OnEvent", function(_, event, ...)
-        self:HandleEvent(event, ...)
-    end)
 end
 
--- Handle a fired event and evaluate triggers
+------------------------------------------------------------------------
+-- Evaluation
+------------------------------------------------------------------------
+local COMPARE = {
+    ["<"] = function(a, b) return a < b end,
+    ["<="] = function(a, b) return a <= b end,
+    [">"] = function(a, b) return a > b end,
+    [">="] = function(a, b) return a >= b end,
+    ["=="] = function(a, b) return math.floor(a + 0.5) == b end,
+    ["~="] = function(a, b) return math.floor(a + 0.5) ~= b end,
+}
+
+-- Returns true/false, or nil when the value cannot be read right now.
+local function HealthCondition(t, unitArg)
+    local unit = t.options.unit or "player"
+    if unitArg and unitArg ~= unit then return nil end -- event was for another unit
+    if not UnitExists(unit) then return false end
+    local cur, max = UnitHealth(unit), UnitHealthMax(unit)
+    if WorkoutBuddy.IsSecret(cur) or WorkoutBuddy.IsSecret(max) then
+        return nil
+    end
+    if type(cur) ~= "number" or type(max) ~= "number" or max <= 0 then return false end
+    local pct = cur / max * 100
+    local cmp = COMPARE[t.options.op or "<"] or COMPARE["<"]
+    return cmp(pct, tonumber(t.options.value) or 50)
+end
+
+function TriggerManager:Compile(code, name)
+    local f = self.compiled[code]
+    if f == nil then
+        local err
+        f, err = loadstring(code, "WorkoutBuddy trigger: " .. (name or "?"))
+        if not f then
+            self:WarnOnce("compile:" .. code, "Trigger '" .. (name or "?") .. "' has a Lua error: " .. tostring(err))
+            f = false
+        end
+        self.compiled[code] = f
+    end
+    return f or nil
+end
+
 function TriggerManager:HandleEvent(event, ...)
-    local triggers = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.triggers or {}
-    for _, t in ipairs(triggers) do
-        local evt = t.event == "CUSTOM" and t.customEvent or t.event
-        if t.enabled ~= false and evt == event then
-            local pass = true
-            if t.options and t.event == "UNIT_HEALTH" then
-                local unit = t.options.unit or "player"
-                local max = UnitHealthMax(unit)
-                local cur = UnitHealth(unit)
-                local pct = (max > 0) and (cur / max * 100) or 0
-                local val = tonumber(t.options.value or 0) or 0
-                local op = t.options.op or "<"
-                if op == "<" then pass = pct < val
-                elseif op == "<=" then pass = pct <= val
-                elseif op == ">" then pass = pct > val
-                elseif op == ">=" then pass = pct >= val
-                elseif op == "==" then pass = pct == val
-                elseif op == "~=" then pass = pct ~= val end
-            elseif t.options and t.event == "PLAYER_UPDATE_RESTING" then
-                local isResting = IsResting()
-                local desired = t.options.state == "resting"
-                pass = (isResting == desired)
-            end
-            if t.custom and t.custom ~= "" then
-                local f, err = loadstring(t.custom)
-                if not f then
-                    self:HandleError(err)
-                    pass = false
-                else
-                    local ok, res = pcall(f, ...)
-                    if ok then
-                        pass = not not res
-                    else
-                        self:HandleError(res)
-                        pass = false
-                    end
-                end
-            end
-            if pass then
-                if t.action == "open_frame" then
-                    local openEmpty = WorkoutBuddy.db and WorkoutBuddy.db.profile and WorkoutBuddy.db.profile.reminder_events and WorkoutBuddy.db.profile.reminder_events.open_empty
-                    local hasItems = QueueHasItems()
-                    if WorkoutBuddy.ReminderCore and WorkoutBuddy.ReminderCore.ShowIfAllowed and (hasItems or (openEmpty and QueueIsEmpty())) then
-                        WorkoutBuddy.ReminderCore:ShowIfAllowed()
-                    end
-                else
-                    local src = t.name or event
-                    WorkoutBuddy:SuggestWorkout(src)
-                end
-            end
+    for _, t in ipairs(Triggers()) do
+        if t.enabled ~= false and TriggerEvent(t) == event then
+            self:Evaluate(t, event, ...)
         end
     end
 end
 
-function TriggerManager:HandleError(err)
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000WorkoutBuddy trigger error:|r " .. tostring(err))
+function TriggerManager:Evaluate(t, event, ...)
+    local pass = true
+    local edge = false
+
+    if t.event == "UNIT_HEALTH" then
+        local res = HealthCondition(t, ...)
+        if res == nil then return end -- other unit, or health hidden right now
+        pass, edge = res, true
+    elseif t.event == "PLAYER_UPDATE_RESTING" and t.options.state then
+        pass = (IsResting() and true or false) == (t.options.state == "resting")
+    end
+
+    if pass and t.custom and t.custom ~= "" and not t.imported then
+        local f = self:Compile(t.custom, t.name)
+        if not f then return end
+        local ok, res = pcall(f, ...)
+        if ok then
+            pass = res and true or false
+        else
+            self:WarnOnce("run:" .. t.custom, "Trigger '" .. (t.name or "?") .. "' condition failed: " .. tostring(res))
+            return
+        end
+    end
+
+    -- Edge triggering for continuous conditions: fire once when the
+    -- condition becomes true, not on every update while it stays true.
+    if edge then
+        local was = t._lastPass
+        t._lastPass = pass
+        if was then return end
+    end
+
+    if not pass then return end
+
+    if t.action == "open_frame" then
+        WorkoutBuddy.ReminderEvents:TryShowFrame()
+    else
+        WorkoutBuddy:SuggestWorkout((t.name and t.name ~= "") and t.name or event)
+    end
 end
 
-WorkoutBuddy.TriggerManager = TriggerManager
-return TriggerManager
+function TriggerManager:WarnOnce(key, msg)
+    self.warned = self.warned or {}
+    if self.warned[key] then return end
+    self.warned[key] = true
+    WorkoutBuddy:Print("|cFFFF5555" .. msg .. "|r")
+end
+
+--- Called after a trigger is edited so its compiled code and warnings refresh.
+function TriggerManager:Reset()
+    self.compiled = {}
+    self.warned = {}
+    self:RegisterEvents()
+end

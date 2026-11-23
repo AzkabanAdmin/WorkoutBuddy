@@ -1,198 +1,252 @@
+-- hydration.lua
+-- Water reminders on a timer, with a small movable popup.
 
 local _, WorkoutBuddy = ...
-WorkoutBuddy = WorkoutBuddy or _G.WorkoutBuddy
-if WorkoutBuddy and WorkoutBuddy.DbgPrint then
-    WorkoutBuddy:DbgPrint("Loaded: hydration.lua")
-end
 
 local Hydration = {}
+WorkoutBuddy.Hydration = Hydration
 
-Hydration.DEFAULTS = {
-    enabled = false,
-    mode = "smart", -- "smart" uses goals; "interval" uses minutes
-    total = 32,       -- total ounces per cycle
-    timeframe = 120,  -- minutes
-    per = 8,          -- ounces per reminder
-    interval = 60,    -- minutes for simple interval mode
-
-    sound = "Alarm Clock",
-    scale = 1.2,
-    alpha = 0.9,
-    x = 0,
-    y = 0,
-    initialized = false,
-    next_time = 0,
-    last_time = 0,
-}
+local MIN_INTERVAL = 60 -- never remind more often than once a minute
 
 local function opts()
-    if not WorkoutBuddy.db or not WorkoutBuddy.db.profile then return Hydration.DEFAULTS end
-    if not WorkoutBuddy.db.profile.hydration then
-        WorkoutBuddy.db.profile.hydration = CopyTable(Hydration.DEFAULTS)
-    end
     return WorkoutBuddy.db.profile.hydration
 end
 
+------------------------------------------------------------------------
+-- Scheduling
+------------------------------------------------------------------------
 function Hydration:GetInterval()
     local o = opts()
+    local seconds
     if o.mode == "interval" then
-        return (o.interval or 60) * 60
-    end
-    local reminders = math.max(1, math.ceil((o.total or 32) / (o.per or 8)))
-    return ((o.timeframe or 120) * 60) / reminders
-end
-
-function Hydration:ApplyOptions()
-    if not self.frame then return end
-    local o = opts()
-    if not o.initialized then
-        self.frame:SetPoint("CENTER", UIParent, "CENTER")
-        local left, top = self.frame:GetLeft(), self.frame:GetTop()
-        o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
-        o.initialized = true
+        seconds = (tonumber(o.interval) or 60) * 60
     else
-        self.frame:ClearAllPoints()
-        self.frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", o.x or 0, o.y or 0)
+        local per = math.max(1, tonumber(o.per) or 8)
+        local reminders = math.max(1, math.ceil((tonumber(o.total) or 32) / per))
+        seconds = ((tonumber(o.timeframe) or 120) * 60) / reminders
     end
-    self.frame:SetScale(o.scale or 1)
-    self.frame:SetAlpha(o.alpha or 0.9)
+    return math.max(MIN_INTERVAL, seconds)
 end
 
-function Hydration:CreateFrame()
-    if self.frame then return end
-    self.frame = CreateFrame("Frame", "WorkoutBuddy_HydrationFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    self.frame:SetSize(220, 80)
-    self.frame:SetClampedToScreen(true)
+function Hydration:Schedule(delay)
+    self:Stop()
     local o = opts()
-    if not o.initialized then
-        -- First time showing the frame: center it and save coordinates
-        self.frame:SetPoint("CENTER", UIParent, "CENTER")
-        local left, top = self.frame:GetLeft(), self.frame:GetTop()
-        o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
-        o.initialized = true
-    else
-        self:ApplyOptions()
-    end
-    self.frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 8, edgeSize = 8,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 }
-    })
-    self.frame:SetBackdropColor(0, 0, 0, 0.85)
-    self.frame:SetMovable(true)
-    self.frame:EnableMouse(true)
-    self.frame:RegisterForDrag("LeftButton")
-    self.frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
-    self.frame:SetScript("OnDragStop", function(f)
-        f:StopMovingOrSizing()
-        local opt = opts()
-        opt.x = math.floor(f:GetLeft() + 0.5)
-        opt.y = math.floor(f:GetTop() + 0.5)
-        Hydration:ApplyOptions()
-    end)
-
-    self.frame.text = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-    self.frame.text:SetPoint("CENTER")
-    self.frame.close = CreateFrame("Button", nil, self.frame, "UIPanelCloseButton")
-    self.frame.close:SetPoint("TOPRIGHT", -4, -4)
-    self.frame.close:SetScript("OnClick", function() self.frame:Hide() end)
-    tinsert(UISpecialFrames, self.frame:GetName())
-    self.frame:Hide()
-end
-
-function Hydration:CenterFrame(save)
-    self:CreateFrame()
-    local o = opts()
-    self.frame:ClearAllPoints()
-    self.frame:SetPoint("CENTER", UIParent, "CENTER")
-    if save then
-        local left, top = self.frame:GetLeft(), self.frame:GetTop()
-        o.x = math.floor(left + 0.5)
-        o.y = math.floor(top + 0.5)
-    end
-end
-
-function Hydration:ShowPopup(test)
-    self:CreateFrame()
-    self:ApplyOptions()
-    local o = opts()
-    local msg
-    if o.mode == "interval" then
-        msg = "Time to drink water!"
-    else
-        msg = string.format("Drink %d oz of water!", o.per or 8)
-    end
-    self.frame.text:SetText(msg)
-    self.frame:Show()
-
-    if not test and o.sound then
-        WorkoutBuddy.Sounds:Play(o.sound)
-    end
-end
-
-function Hydration:PlaySelectedSound()
-    local o = opts()
-    WorkoutBuddy.Sounds:Play(o.sound)
+    o.next_time = WorkoutBuddy.Now() + delay
+    self.timer = C_Timer.NewTimer(delay, function() Hydration:OnTimer() end)
 end
 
 function Hydration:OnTimer()
-    local o = opts()
-    o.last_time = GetServerTime()
-    self:ShowPopup(false)
-    local interval = self:GetInterval()
-    o.next_time = o.last_time + interval
-    self.timer = C_Timer.NewTimer(interval, function() Hydration:OnTimer() end)
-end
-
-function Hydration:Start()
-    self:Stop()
+    self.timer = nil
     local o = opts()
     if not o.enabled then return end
-    local interval = self:GetInterval()
-    local now = GetServerTime()
-    o.last_time = now
-    o.next_time = now + interval
-    self.timer = C_Timer.NewTimer(interval, function() Hydration:OnTimer() end)
+    o.last_time = WorkoutBuddy.Now()
+    self:ShowPopup(false)
+    self:Schedule(self:GetInterval())
+end
+
+--- Start a fresh cycle (used when settings change).
+function Hydration:Start()
+    if not opts().enabled then return self:Stop() end
+    self:Schedule(self:GetInterval())
 end
 
 function Hydration:Stop()
-    if self.timer and self.timer.Cancel then
+    if self.timer then
         self.timer:Cancel()
         self.timer = nil
     end
 end
 
+--- Continue the saved schedule after login or reload.
 function Hydration:Resume()
-    self:Stop()
     local o = opts()
-    if not o.enabled then return end
-    local now = GetServerTime()
-    local delay = (o.next_time or now) - now
-    if delay <= 0 then delay = 1 end
-    self.timer = C_Timer.NewTimer(delay, function() Hydration:OnTimer() end)
+    if not o.enabled then return self:Stop() end
+    local delay = (tonumber(o.next_time) or 0) - WorkoutBuddy.Now()
+    if delay > self:GetInterval() then delay = self:GetInterval() end
+    if delay < 15 then delay = 15 end -- let the UI settle after a loading screen
+    self:Schedule(delay)
 end
 
--- Reapply profile settings when the active profile changes
 function Hydration:OnProfileChanged()
+    if self.frame then
+        self.frame:Hide()
+        self:ApplyOptions()
+    end
+    self:Resume()
+end
+
+------------------------------------------------------------------------
+-- Amounts and units
+------------------------------------------------------------------------
+local ML_PER_OZ = 29.5735
+
+function Hydration:UnitLabel()
+    return opts().unit == "ml" and "ml" or "oz"
+end
+
+--- Switch units and convert the saved amounts so goals stay the same.
+function Hydration:SetUnit(unit)
     local o = opts()
-    local firstRun = not o.initialized
-    self:CreateFrame()
-    self:ApplyOptions()
-    if firstRun then
-        self:ShowPopup(true)
+    if unit == o.unit then return end
+    local factor = (unit == "ml") and ML_PER_OZ or (1 / ML_PER_OZ)
+    local roundTo = (unit == "ml") and 10 or 1
+    local function conv(v)
+        local n = (tonumber(v) or 0) * factor
+        return math.max(roundTo, math.floor(n / roundTo + 0.5) * roundTo)
     end
-    if o.enabled then
-        self:Resume()
+    o.total = conv(o.total)
+    o.per = conv(o.per)
+    o.unit = unit
+end
+
+function Hydration:LogDrink(amount)
+    local o = opts()
+    amount = amount or (o.mode == "interval" and 0 or o.per) or 0
+    if amount <= 0 then amount = (o.unit == "ml") and 250 or 8 end
+    WorkoutBuddy.Stats:AddWater(amount, self:UnitLabel())
+    local total, unit = WorkoutBuddy.Stats:GetTodayWater()
+    WorkoutBuddy:Print(string.format("|cFF66BBFFLogged %d %s of water.|r Today: %d %s", amount, self:UnitLabel(), total, unit or ""))
+end
+
+------------------------------------------------------------------------
+-- Popup frame
+------------------------------------------------------------------------
+function Hydration:ApplyOptions()
+    local f = self.frame
+    if not f then return end
+    local o = opts()
+    f:SetScale(o.scale or 1)
+    f:SetAlpha(o.alpha or 0.95)
+    f:ClearAllPoints()
+    if o.x and o.y then
+        f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", o.x, o.y)
     else
-        self:Stop()
+        f:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
     end
 end
 
-if WorkoutBuddy then
-    WorkoutBuddy.Hydration = Hydration
-else
-    _G.WorkoutBuddy_Hydration = Hydration
-end
-return Hydration
+function Hydration:CreateFrame()
+    if self.frame then return self.frame end
+    local hf = CreateFrame("Frame", "WorkoutBuddy_HydrationFrame", UIParent,
+        BackdropTemplateMixin and "BackdropTemplate" or nil)
+    self.frame = hf
+    hf:SetSize(250, 104)
+    hf:SetClampedToScreen(true)
+    hf:SetFrameStrata("HIGH")
+    hf:SetMovable(true)
+    hf:EnableMouse(true)
+    hf:RegisterForDrag("LeftButton")
 
+    hf:SetBackdrop({
+        bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 8, edgeSize = 10,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    hf:SetBackdropColor(0.03, 0.08, 0.22, 0.94)
+    hf:SetBackdropBorderColor(0.20, 0.50, 0.90, 0.85)
+
+    local headerBg = hf:CreateTexture(nil, "BACKGROUND", nil, 1)
+    headerBg:SetPoint("TOPLEFT", hf, "TOPLEFT", 3, -3)
+    headerBg:SetPoint("TOPRIGHT", hf, "TOPRIGHT", -3, -3)
+    headerBg:SetHeight(26)
+    headerBg:SetColorTexture(0.05, 0.15, 0.40, 0.95)
+
+    local headerLine = hf:CreateTexture(nil, "ARTWORK")
+    headerLine:SetPoint("TOPLEFT", headerBg, "BOTTOMLEFT")
+    headerLine:SetPoint("TOPRIGHT", headerBg, "BOTTOMRIGHT")
+    headerLine:SetHeight(1)
+    headerLine:SetColorTexture(0.30, 0.65, 1.00, 0.80)
+
+    local title = hf:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("LEFT", headerBg, "LEFT", 8, 0)
+    title:SetText("|cFF66BBFFHydration Reminder|r")
+
+    local close = CreateFrame("Button", nil, hf, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", 0, 0)
+    close:SetScript("OnClick", function() hf:Hide() end)
+
+    hf.text = hf:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    hf.text:SetPoint("TOP", headerBg, "BOTTOM", 0, -10)
+    hf.text:SetJustifyH("CENTER")
+
+    local drank = CreateFrame("Button", nil, hf, "UIPanelButtonTemplate")
+    drank:SetSize(100, 22)
+    drank:SetPoint("BOTTOM", hf, "BOTTOM", -54, 10)
+    drank:SetText("Drank it")
+    drank:SetScript("OnClick", function()
+        Hydration:LogDrink()
+        hf:Hide()
+    end)
+
+    local later = CreateFrame("Button", nil, hf, "UIPanelButtonTemplate")
+    later:SetSize(100, 22)
+    later:SetPoint("LEFT", drank, "RIGHT", 8, 0)
+    later:SetText("Remind in 10m")
+    later:SetScript("OnClick", function()
+        Hydration:Schedule(600)
+        hf:Hide()
+    end)
+
+    hf:SetScript("OnDragStart", function(frame) frame:StartMoving() end)
+    hf:SetScript("OnDragStop", function(frame)
+        frame:StopMovingOrSizing()
+        local left, top = frame:GetLeft(), frame:GetTop()
+        if left and top then
+            local o = opts()
+            o.x, o.y = math.floor(left + 0.5), math.floor(top + 0.5)
+        end
+    end)
+    hf:SetScript("OnHide", function()
+        if Hydration.hideTimer then
+            Hydration.hideTimer:Cancel()
+            Hydration.hideTimer = nil
+        end
+    end)
+
+    tinsert(UISpecialFrames, hf:GetName())
+    hf:Hide()
+    self:ApplyOptions()
+    return hf
+end
+
+function Hydration:CenterFrame(save)
+    self:CreateFrame()
+    if save then
+        local o = opts()
+        o.x, o.y = nil, nil
+    end
+    self:ApplyOptions()
+end
+
+--- Show the popup. `test` skips the sound (used by the settings preview).
+function Hydration:ShowPopup(test)
+    local f = self:CreateFrame()
+    self:ApplyOptions()
+    local o = opts()
+    if o.mode == "interval" then
+        f.text:SetText("|cFF66BBFFTime to drink some water!|r")
+    else
+        f.text:SetText(string.format("|cFF66BBFFDrink |r|cFFFFD700%d %s|r|cFF66BBFF of water!|r",
+            o.per or 8, self:UnitLabel()))
+    end
+    f:Show()
+
+    if not test then
+        WorkoutBuddy.Sounds:Play(o.sound)
+    end
+
+    if self.hideTimer then self.hideTimer:Cancel() end
+    self.hideTimer = nil
+    local auto = tonumber(o.auto_hide) or 0
+    if auto > 0 then
+        self.hideTimer = C_Timer.NewTimer(auto, function()
+            Hydration.hideTimer = nil
+            f:Hide()
+        end)
+    end
+end
+
+function Hydration:PlaySelectedSound()
+    WorkoutBuddy.Sounds:Play(opts().sound)
+end

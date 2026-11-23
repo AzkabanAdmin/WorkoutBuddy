@@ -1,41 +1,43 @@
-## Interface: 11507
+## Interface: 16001, 120105, 120107, 11509
 ## Title: Workout Buddy
-## Notes: An addon to help you workout while playing World of Warcraft.
-## Author: MrJoints
-## Version: 1.0.0
+## Notes: Turns game moments into quick exercise, stretch and hydration breaks, with stats and streaks.
+## Author: AzkabanAdmin
+## Version: @project-version@
+## Category: Miscellaneous
+## IconTexture: Interface\Icons\Spell_Nature_Strength
 ## SavedVariables: WorkoutBuddyDB
 
+# Libraries
 Libs\Ace3\LibStub\LibStub.lua
 Libs\Ace3\CallbackHandler-1.0\CallbackHandler-1.0.xml
 Libs\Ace3\AceAddon-3.0\AceAddon-3.0.xml
 Libs\Ace3\AceConsole-3.0\AceConsole-3.0.xml
 Libs\Ace3\AceEvent-3.0\AceEvent-3.0.xml
 Libs\Ace3\AceDB-3.0\AceDB-3.0.xml
+Libs\Ace3\AceDBOptions-3.0\AceDBOptions-3.0.xml
 Libs\Ace3\AceGUI-3.0\AceGUI-3.0.xml
 Libs\Ace3\AceConfig-3.0\AceConfig-3.0.xml
-Libs\Ace3\AceDBOptions-3.0\AceDBOptions-3.0.xml
+Libs\Ace3\AceSerializer-3.0\AceSerializer-3.0.xml
 Libs\LibSharedMedia-3.0\lib.xml
-
-Libs\LibDBIcon-1.0\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\LibDBIcon-1.0\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\LibDBIcon-1.0\lib.xml
-Libs\LibDBIcon-1.0\LibDBIcon-1.0\LibDBIcon-1.0.lua
-Libs\LibDBIcon-1.0\embeds.xml
 
+# Core
 WorkoutBuddy.lua
 Sounds.lua
 wow_events.lua
+stats.lua
 trigger_manager.lua
 events.lua
-stats.lua
 hydration.lua
 
-reminder_frame/reminder_state.lua
-reminder_frame/reminder_queue.lua
-reminder_frame/reminder_events.lua
-reminder_frame/reminder_core.lua
-reminder_frame.lua
+# Reminder frame
+reminder_frame\reminder_state.lua
+reminder_frame\reminder_queue.lua
+reminder_frame\reminder_events.lua
+reminder_frame\reminder_core.lua
 
+# Options
 config\workout_library.lua
 config\general.lua
 config\automation.lua
@@ -44,6 +46,5 @@ config\hydration.lua
 config\display.lua
 config\stats.lua
 config\importexport.lua
-config\profile.lua
 config.lua
 minimap_button.lua

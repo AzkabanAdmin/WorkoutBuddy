@@ -1,0 +1,12 @@
+{
+  "name": "workoutbuddy-tests",
+  "private": true,
+  "description": "Offline tests for the Workout Buddy WoW addon (mocked game client).",
+  "scripts": {
+    "test": "node check.js .. && node run.js .. harness.lua && node run.js .. harness_v1.lua"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.5",
+    "luaparse": "^0.3.1"
+  }
+}

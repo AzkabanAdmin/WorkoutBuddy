@@ -1,60 +1,85 @@
-local AceConfig = LibStub("AceConfig-3.0")
-local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+-- config/stats.lua
+-- Stats tab.
 
-function WorkoutBuddy_StatsTab()
+local _, WorkoutBuddy = ...
+WorkoutBuddy.ConfigTabs = WorkoutBuddy.ConfigTabs or {}
+
+local view = { timeframe = "week", custom = "" }
+
+function WorkoutBuddy.ConfigTabs.Stats()
     return {
         type = "group",
         name = "Stats",
         order = 5,
         args = {
+            today = {
+                type = "description",
+                name = function() return "|cFF66FF66" .. WorkoutBuddy.Stats:GetTodayLine() .. "|r\n" end,
+                fontSize = "medium",
+                order = 1,
+            },
+            goal = {
+                type = "range",
+                name = "Daily goal (workouts)",
+                desc = "How many workouts you aim to complete each day. 0 turns the goal off.",
+                min = 0, max = 50, step = 1,
+                order = 2,
+                get = function() return WorkoutBuddy.db.profile.daily_goal or 0 end,
+                set = function(_, val)
+                    WorkoutBuddy.db.profile.daily_goal = val
+                    WorkoutBuddy.ReminderCore:UpdateDisplay()
+                end,
+            },
+            historyHeader = { type = "header", name = "History", order = 10 },
             timeframe = {
                 type = "select",
-                name = "Time Frame",
-                order = 1,
+                name = "Show",
+                order = 11,
                 values = {
-                    lifetime = "Lifetime",
                     day = "Today",
-                    week = "This Week",
-                    month = "This Month",
-                    custom = "Custom",
+                    week = "This week",
+                    month = "This month",
+                    lifetime = "All time",
+                    custom = "Custom range",
                 },
-                get = function()
-                    return WorkoutBuddy._statsTimeframe or "lifetime"
-                end,
-                set = function(info, val)
-                    WorkoutBuddy._statsTimeframe = val
-                    LibStub("AceConfigRegistry-3.0"):NotifyChange("WorkoutBuddy")
-                end,
+                sorting = { "day", "week", "month", "lifetime", "custom" },
+                get = function() return view.timeframe end,
+                set = function(_, val) view.timeframe = val end,
             },
             customInput = {
                 type = "input",
-                name = "Custom Range",
-                desc = "Enter ranges like '5days', '2weeks', '3hours' or '10minutes'",
-                order = 2,
-                hidden = function()
-                    return (WorkoutBuddy._statsTimeframe or "lifetime") ~= "custom"
-                end,
-                get = function()
-                    return WorkoutBuddy._statsCustomInput or ""
-                end,
-                set = function(info, val)
-                    WorkoutBuddy._statsCustomInput = val
-                    LibStub("AceConfigRegistry-3.0"):NotifyChange("WorkoutBuddy")
-                end,
+                name = "Custom range",
+                desc = "For example 3days, 2weeks, 12hours or 90minutes.",
+                order = 12,
+                hidden = function() return view.timeframe ~= "custom" end,
+                get = function() return view.custom end,
+                set = function(_, val) view.custom = val end,
             },
             summary = {
                 type = "description",
                 name = function()
-                    local tf = WorkoutBuddy._statsTimeframe or "lifetime"
+                    local tf = view.timeframe
                     if tf == "custom" then
-                        tf = WorkoutBuddy._statsCustomInput or "lifetime"
+                        if strtrim(view.custom) == "" then return "Enter a range above." end
+                        tf = view.custom
                     end
-                    if WorkoutBuddy.Stats and WorkoutBuddy.Stats.GetSummary then
-                        return WorkoutBuddy.Stats:GetSummary(tf)
-                    end
-                    return "No data"
+                    return WorkoutBuddy.Stats:GetSummary(tf)
                 end,
-                order = 3,
+                fontSize = "medium",
+                order = 13,
+            },
+            resetHeader = { type = "header", name = "", order = 20 },
+            reset = {
+                type = "execute",
+                name = "Reset stats",
+                desc = "Delete all logged workouts and water for this profile.",
+                order = 21,
+                confirm = true,
+                confirmText = "Delete all of this profile's workout and water history? This cannot be undone.",
+                func = function()
+                    WorkoutBuddy.Stats:Reset()
+                    WorkoutBuddy.ReminderCore:UpdateDisplay()
+                end,
             },
         },
     }

@@ -1,188 +1,278 @@
+-- config/automation.lua
+-- Editor window for custom triggers.
+
+local _, WorkoutBuddy = ...
+WorkoutBuddy.ConfigTabs = WorkoutBuddy.ConfigTabs or {}
+
 local AceGUI = LibStub("AceGUI-3.0")
 
--- Show the trigger editor for creating or editing custom events.
--- @param action string "workout" or "open_frame" when creating new triggers
--- @param index  number existing trigger index to edit (nil to create new)
+local WIKI = "https://warcraft.wiki.gg/wiki/"
+
+local ACTIONS = { workout = "Suggest a workout", open_frame = "Open the workout window" }
+local ACTION_ORDER = { "workout", "open_frame" }
+
+--- Open the trigger editor.
+-- @param action string "workout" or "open_frame" for a new trigger
+-- @param index  number index of an existing trigger to edit, or nil
 function WorkoutBuddy:OpenTriggerEditor(action, index)
+    local TM = self.TriggerManager
+    TM:BuildCatalog()
+
     local triggers = self.db.profile.triggers
-    local trigger
-    local isNew = not index
-    if index then
-        trigger = triggers[index]
-        action = trigger.action
-    else
-        trigger = { name = "", event = "PLAYER_LEVEL_UP", action = action or "workout", enabled = true, options = {} }
-    end
+    local original = index and triggers[index]
+    local t = original and CopyTable(original)
+        or { name = "", event = "PLAYER_LEVEL_UP", action = action or "workout", enabled = true, options = {} }
+    t.options = type(t.options) == "table" and t.options or {}
+    t._lastPass = nil
 
     if self.triggerEditor then
-        AceGUI:Release(self.triggerEditor)
-        self.triggerEditor = nil
+        self.triggerEditor:Hide() -- releases the old window via OnClose
     end
 
     local frame = AceGUI:Create("Frame")
-    frame:SetTitle("Event Trigger")
-    frame:SetWidth(420)
-    frame:SetHeight(300)
-    frame:EnableResize(false)
-    frame:SetLayout("List")
+    frame:SetTitle(original and "Edit Trigger" or "New Trigger")
+    frame:SetStatusText("Pick a game event, then choose what happens when it fires.")
+    frame:SetWidth(480)
+    frame:SetHeight(600)
+    frame:SetLayout("Flow")
     frame:SetCallback("OnClose", function(widget)
         AceGUI:Release(widget)
-        if save then
-            AceGUI:Release(save)
-        end
-        self.triggerEditor = nil
+        if self.triggerEditor == widget then self.triggerEditor = nil end
     end)
     self.triggerEditor = frame
-    -- Use default layout spacing
-    if frame.content then
-        frame.content:ClearAllPoints()
-        frame.content:SetPoint("TOPLEFT", 17, -27)
-        frame.content:SetPoint("BOTTOMRIGHT", -17, 40)
-    end
 
+    -- Name
     local nameBox = AceGUI:Create("EditBox")
     nameBox:SetLabel("Name")
     nameBox:SetFullWidth(true)
-    nameBox:SetText(trigger.name or "")
-    nameBox:SetCallback("OnTextChanged", function(_, _, val) trigger.name = val end)
+    nameBox:DisableButton(true)
+    nameBox:SetText(t.name or "")
+    nameBox:SetCallback("OnTextChanged", function(_, _, val) t.name = val end)
     frame:AddChild(nameBox)
 
-    -- Forward declaration for updateFields so callbacks defined below can call
-    -- it before the actual function body is assigned
-    local updateFields
+    -- Action and enabled
+    local actionDrop = AceGUI:Create("Dropdown")
+    actionDrop:SetLabel("When it fires")
+    actionDrop:SetList(ACTIONS, ACTION_ORDER)
+    actionDrop:SetValue(t.action == "open_frame" and "open_frame" or "workout")
+    actionDrop:SetRelativeWidth(0.6)
+    actionDrop:SetCallback("OnValueChanged", function(_, _, val) t.action = val end)
+    frame:AddChild(actionDrop)
 
-    -- Category dropdown controls which events are shown
+    local enabledBox = AceGUI:Create("CheckBox")
+    enabledBox:SetLabel("Enabled")
+    enabledBox:SetValue(t.enabled ~= false)
+    enabledBox:SetRelativeWidth(0.35)
+    enabledBox:SetCallback("OnValueChanged", function(_, _, val) t.enabled = val end)
+    frame:AddChild(enabledBox)
+
+    -- Event selection
+    local catList = {}
+    for _, cat in ipairs(TM.CategoryOrder) do catList[cat] = cat end
+
     local catDrop = AceGUI:Create("Dropdown")
-    catDrop:SetLabel("Category")
-    self.TriggerManager:FillCategoryDropdown(catDrop)
-    catDrop:SetWidth(380)
+    catDrop:SetLabel("Event category")
+    catDrop:SetList(catList, TM.CategoryOrder)
+    catDrop:SetRelativeWidth(0.4)
     frame:AddChild(catDrop)
 
     local eventDrop = AceGUI:Create("Dropdown")
     eventDrop:SetLabel("Event")
-    local function setCategory(cat)
-        self.TriggerManager:FillEventDropdown(eventDrop, cat)
-    end
-    local function onCategoryChanged(_, _, val)
-        setCategory(val)
-        local list = self.TriggerManager.EventCategories[val]
-        local first = list and list[1]
-        eventDrop:SetValue(first)
-        trigger.event = first
-        updateFields(first)
-    end
-
-    local startCat = trigger.event:match("^([A-Z]+)_") or "Other"
-    eventDrop:SetWidth(380)
+    eventDrop:SetRelativeWidth(0.58)
     frame:AddChild(eventDrop)
+
+    local customEvent = AceGUI:Create("EditBox")
+    customEvent:SetLabel("Or type any event name")
+    customEvent:SetFullWidth(true)
+    customEvent:DisableButton(true)
+    frame:AddChild(customEvent)
 
     local optionsGroup = AceGUI:Create("SimpleGroup")
     optionsGroup:SetFullWidth(true)
     optionsGroup:SetLayout("Flow")
     frame:AddChild(optionsGroup)
 
+    -- Lua condition
+    local condition = AceGUI:Create("MultiLineEditBox")
+    condition:SetLabel("Advanced: Lua condition (optional)")
+    condition:SetFullWidth(true)
+    condition:SetNumLines(5)
+    condition:DisableButton(true)
+    condition:SetText(t.custom or "")
+    condition:SetCallback("OnTextChanged", function(_, _, val) t.custom = val end)
+    frame:AddChild(condition)
 
+    local condHelp = AceGUI:Create("Label")
+    condHelp:SetFullWidth(true)
+    local helpText = "|cFF888888The event's arguments are available as '...'. Return true to fire. Example: local unit = ...; return unit == 'player'|r"
+    if t.imported then
+        helpText = "|cFFFF8800This trigger came from an import. Read the condition above before saving; saving enables it.|r\n" .. helpText
+    end
+    condHelp:SetText(helpText)
+    frame:AddChild(condHelp)
 
+    -- Buttons
     local save = AceGUI:Create("Button")
     save:SetText("Save")
-    save:SetWidth(80)
+    save:SetRelativeWidth(0.5)
     frame:AddChild(save)
-    save.frame:SetParent(frame.frame)
-    save.frame:ClearAllPoints()
-    -- Anchor Save beside the window's close button
-    save.frame:SetPoint("TOPRIGHT", frame.frame, "TOPRIGHT", -50, -6)
-    -- Remove from layout so reflows don't reposition it
-    for i, child in ipairs(frame.children) do
-        if child == save then
-            table.remove(frame.children, i)
-            break
-        end
+
+    local cancel = AceGUI:Create("Button")
+    cancel:SetText("Cancel")
+    cancel:SetRelativeWidth(0.48)
+    cancel:SetCallback("OnClick", function() frame:Hide() end)
+    frame:AddChild(cancel)
+
+    ------------------------------------------------------------------
+    local function CurrentEvent()
+        if t.event == "CUSTOM" then return t.customEvent end
+        return t.event
     end
 
-    -- Internal helpers
-    local function buildEventOptions(evt)
+    local function BuildEventOptions()
         optionsGroup:ReleaseChildren()
-        local link = "https://wowpedia.fandom.com/wiki/" .. evt
+        local evt = CurrentEvent() or ""
+
         local info = AceGUI:Create("InteractiveLabel")
         info:SetFullWidth(true)
-        info:SetText("More info: "..link)
-        info:SetCallback("OnClick", function() WorkoutBuddy:CopyToClipboard(link) end)
+        local help = WorkoutBuddy.EventHelp[evt]
+        info:SetText((help and ("|cFFFFFFFF" .. help .. "|r\n") or "") ..
+            "|cFF66BBFFClick for the event's wiki link|r")
+        info:SetCallback("OnClick", function() WorkoutBuddy:CopyToClipboard(WIKI .. evt) end)
         optionsGroup:AddChild(info)
 
-        if evt == "UNIT_HEALTH" then
+        if t.event == "UNIT_HEALTH" then
             local unit = AceGUI:Create("Dropdown")
             unit:SetLabel("Unit")
-            unit:SetList({player="Player", target="Target", focus="Focus", pet="Pet"})
-            unit:SetValue(trigger.options.unit or "player")
+            unit:SetList({ player = "Player", target = "Target", focus = "Focus", pet = "Pet" },
+                { "player", "target", "focus", "pet" })
+            unit:SetValue(t.options.unit or "player")
             unit:SetWidth(120)
-            unit:SetCallback("OnValueChanged", function(_,_,v) trigger.options.unit = v end)
+            unit:SetCallback("OnValueChanged", function(_, _, v) t.options.unit = v end)
 
             local op = AceGUI:Create("Dropdown")
-            op:SetLabel("Operator")
-            op:SetList({["<"]="<", ["<="]="<=", [">"]=">", [">="]=">=", ["=="]="==", ["~="]="~="})
-            op:SetValue(trigger.options.op or "<")
-            op:SetWidth(80)
-            op:SetCallback("OnValueChanged", function(_,_,v) trigger.options.op = v end)
+            op:SetLabel("Health is")
+            op:SetList({ ["<"] = "below", ["<="] = "at or below", [">"] = "above", [">="] = "at or above",
+                ["=="] = "exactly", ["~="] = "not" }, { "<", "<=", ">", ">=", "==", "~=" })
+            op:SetValue(t.options.op or "<")
+            op:SetWidth(120)
+            op:SetCallback("OnValueChanged", function(_, _, v) t.options.op = v end)
 
             local val = AceGUI:Create("EditBox")
-            val:SetLabel("Value (%)")
+            val:SetLabel("Percent")
             val:SetWidth(80)
-            val:SetText(trigger.options.value or "50")
-            val:SetCallback("OnTextChanged", function(_,_,v) trigger.options.value = v end)
+            val:DisableButton(true)
+            val:SetText(tostring(t.options.value or "50"))
+            val:SetCallback("OnTextChanged", function(_, _, v) t.options.value = tonumber(v) end)
 
             optionsGroup:AddChild(unit)
             optionsGroup:AddChild(op)
             optionsGroup:AddChild(val)
-        elseif evt == "PLAYER_UPDATE_RESTING" then
+        elseif t.event == "PLAYER_UPDATE_RESTING" then
             local rest = AceGUI:Create("Dropdown")
-            rest:SetLabel("State")
-            rest:SetList({resting="Resting", active="Not Resting"})
-            rest:SetValue(trigger.options.state or "resting")
-            rest:SetWidth(150)
-            rest:SetCallback("OnValueChanged", function(_,_,v) trigger.options.state = v end)
+            rest:SetLabel("Fire when")
+            rest:SetList({ resting = "Entering a rest area", active = "Leaving a rest area" }, { "resting", "active" })
+            rest:SetValue(t.options.state or "resting")
+            t.options.state = t.options.state or "resting"
+            rest:SetWidth(200)
+            rest:SetCallback("OnValueChanged", function(_, _, v) t.options.state = v end)
             optionsGroup:AddChild(rest)
         end
-    end
-
-    updateFields = function(val)
-        buildEventOptions(val)
+        optionsGroup:DoLayout()
         frame:DoLayout()
     end
 
-    catDrop:SetValue(startCat)
-    setCategory(startCat)
-    eventDrop:SetValue(trigger.event)
-    updateFields(trigger.event)
-    catDrop:SetCallback("OnValueChanged", onCategoryChanged)
-
-    eventDrop:SetCallback("OnValueChanged", function(_, _, val)
-        trigger.event = val
-        updateFields(val)
-    end)
-    -- Tooltip showing help for selected event
-    local function showEventTip()
-        local evt = eventDrop:GetValue()
-        local tip = WorkoutBuddy.TriggerManager.EventHelp[evt]
-        GameTooltip:SetOwner(eventDrop.dropdown, "ANCHOR_RIGHT")
-        GameTooltip:SetText(evt, 1, 1, 1)
-        if tip then
-            GameTooltip:AddLine(tip, nil, nil, nil, true)
-        end
-        GameTooltip:AddLine("Click to copy link", 0.8, 0.8, 0.8, true)
-        GameTooltip:Show()
+    local function SetCategory(cat)
+        local list, order = {}, TM.EventCategories[cat] or {}
+        for _, evt in ipairs(order) do list[evt] = evt end
+        eventDrop:SetList(list, order)
     end
-    eventDrop:SetCallback("OnEnter", showEventTip)
-    eventDrop:SetCallback("OnLeave", GameTooltip_Hide)
+
+    -- Initial state
+    local startEvent = CurrentEvent() or "PLAYER_LEVEL_UP"
+    local startCat = TM.CategoryOf(startEvent)
+    local inCatalog = false
+    for _, evt in ipairs(TM.EventCategories[startCat] or {}) do
+        if evt == startEvent then inCatalog = true break end
+    end
+    if inCatalog and t.event ~= "CUSTOM" then
+        catDrop:SetValue(startCat)
+        SetCategory(startCat)
+        eventDrop:SetValue(startEvent)
+    else
+        customEvent:SetText(startEvent)
+        t.event, t.customEvent = "CUSTOM", startEvent
+    end
+    BuildEventOptions()
+
+    catDrop:SetCallback("OnValueChanged", function(_, _, cat)
+        SetCategory(cat)
+        local first = (TM.EventCategories[cat] or {})[1]
+        eventDrop:SetValue(first)
+        t.event, t.customEvent = first, nil
+        customEvent:SetText("")
+        BuildEventOptions()
+    end)
+    eventDrop:SetCallback("OnValueChanged", function(_, _, evt)
+        t.event, t.customEvent = evt, nil
+        customEvent:SetText("")
+        BuildEventOptions()
+    end)
+    eventDrop:SetCallback("OnEnter", function(widget)
+        local evt = widget:GetValue()
+        if not evt then return end
+        GameTooltip:SetOwner(widget.frame, "ANCHOR_RIGHT")
+        GameTooltip:SetText(evt, 1, 1, 1, 1)
+        local tip = WorkoutBuddy.EventHelp[evt]
+        if tip then GameTooltip:AddLine(tip, nil, nil, nil, true) end
+        GameTooltip:Show()
+    end)
+    eventDrop:SetCallback("OnLeave", function() GameTooltip:Hide() end)
+    customEvent:SetCallback("OnTextChanged", function(_, _, val)
+        val = strtrim(string.upper(val or ""))
+        if val == "" then return end
+        t.event, t.customEvent = "CUSTOM", val
+        catDrop:SetValue(nil)
+        eventDrop:SetValue(nil)
+    end)
+    customEvent:SetCallback("OnEnterPressed", function() BuildEventOptions() end)
 
     save:SetCallback("OnClick", function()
-        if isNew then
-            triggers[#triggers + 1] = trigger
+        local evt = CurrentEvent()
+        if not WorkoutBuddy.IsEventValid(evt) then
+            frame:SetStatusText("|cFFFF5555'" .. tostring(evt) .. "' is not an event this game client knows.|r")
+            return
         end
-        trigger.action = action
-        self.TriggerManager:RegisterEvents()
+        -- A catalog event typed by hand is stored as a normal event
+        if t.event == "CUSTOM" then
+            for _, known in ipairs(TM.EventCategories[TM.CategoryOf(evt)] or {}) do
+                if known == evt then
+                    t.event, t.customEvent = evt, nil
+                    break
+                end
+            end
+        end
+        if t.custom and strtrim(t.custom) == "" then t.custom = nil end
+        if t.custom then
+            local ok, err = loadstring(t.custom)
+            if not ok then
+                frame:SetStatusText("|cFFFF5555Condition error: " .. tostring(err) .. "|r")
+                return
+            end
+        end
+        t.imported = nil
+        t._lastPass = nil
+        t.name = strtrim(t.name or "")
+
+        if original then
+            wipe(original)
+            for k, v in pairs(t) do original[k] = v end
+        else
+            table.insert(triggers, t)
+        end
+        TM:Reset()
         self:RebuildCustomEventToggles()
-        self:ForceFullConfigRefresh()
+        self:NotifyConfigChanged()
         frame:Hide()
     end)
-    -- Buttons sit above the frame's status bar
 end
